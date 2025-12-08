@@ -3,7 +3,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-10--18-336791?logo=postgresql) ![Version](https://img.shields.io/badge/Version-3.0-success?style=flat&color=2ea44f) ![License](https://img.shields.io/badge/License-Apache-green?logo=open-source-initiative)
 
 ## Author Introduction
-**Zhang Chen(张晨)**, with extensive experience in PostgreSQL database recovery, has led several PostgreSQL data file extraction and recovery works at the terabyte level in the energy industry.  
+**Zhang Chen(Jay)**, with extensive experience in PostgreSQL database recovery, has led several PostgreSQL data file extraction and recovery works at the terabyte level in the energy industry.  
 The latest PDU software downloads and feature updates can be obtained through the **official WeChat public account `ZhangChen-PDU`**.  
 And it will also be uploaded in this repository.
 
