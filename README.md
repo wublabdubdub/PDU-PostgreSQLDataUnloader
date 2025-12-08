@@ -7,7 +7,7 @@
 The latest PDU software downloads and feature updates can be obtained through the **official WeChat public account `ZhangChen-PDU`**.  
 And it will also be uploaded in this repository.
 
-<img src="PDU二维码.jpg" alt="alt text" style="display: block; margin: 0 auto; width: 200px;">
+<img src="PDU QR code.jpg" alt="alt text" style="display: block; margin: 0 auto; width: 200px;">
 
 **Specific usage scenarios for the PDU tool can also be found in the project's `wiki`, which is continuously updated.**
 
