@@ -1,13 +1,9 @@
 # PostgreSQL Disaster Recovery Tool PDU
 
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-10--18-336791?logo=postgresql) ![Version](https://img.shields.io/badge/Version-3.0-success?style=flat&color=2ea44f) ![License](https://img.shields.io/badge/License-Apache-green?logo=open-source-initiative)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-10--18-336791?logo=postgresql) ![Version](https://img.shields.io/badge/Version-3.0-success?style=flat&color=2ea44f) ![License](https://img.shields.io/badge/License-Apache2.0-green?logo=open-source-initiative)
 
 ## Author Introduction
 **Zhang Chen(Jay)**, with extensive experience in PostgreSQL database recovery, has led several PostgreSQL data file extraction and recovery works at the terabyte level in the energy industry.  
-The latest PDU software downloads and feature updates can be obtained through the **official WeChat public account `ZhangChen-PDU`**.  
-And it will also be uploaded in this repository.
-
-<img src="PDU QR code.jpg" alt="alt text" style="display: block; margin: 0 auto; width: 200px;">
 
 **Specific usage scenarios for the PDU tool can also be found in the project's `wiki`, which is continuously updated.**
 
