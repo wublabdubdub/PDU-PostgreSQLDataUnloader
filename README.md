@@ -239,21 +239,3 @@ Syntax Rules
 
 ## Instructions for Different Data Recover Scenarios 
 PDU supports full Scenarios of Postgresql data recovery which can not be concluded in the ReadMe,so I've compiled **a series of documents in this repository wiki**, which you can refer to.
-
-## Difference Between Community Edition and Profession Edition
-- Community Edition is free to use for all, but Professional Edition is only available by contacting me and not free, according to the recovery difficulty and data volume.
-
-Funtion | Community Edition | Professional Edition |
----- | ---- | ---- |
-Number of Records Restored from delete/update | No More Than 100000 per table | Unlimited 
-Number of Records Extracted from Datafile| No More Than 100000 per table | Unlimited 
-Number of Columns Per Table | No More Than 50 | Unlimited 
-Number of Tables Per Schema | No More Than 500 | Unlimited 
-Speed of TOAST parsing | N | N/100 
-
-## Contact Me
-For any questions regarding the use of PDU software or if the program encounters bugs/core dumps, you are welcome to contact me directly for assistance.
-```bash
-  • WeChat: x1987LJ2020929
-  • Email:  1109315180@qq.com
-```
