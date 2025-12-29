@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "PDU Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/pdu",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "gcc build active file"
+        },
+        {
+            "name": "PDU with Args",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/pdu",
+            "cwd": "${workspaceFolder}",
+            "args": ["use mydb;set public;"],
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

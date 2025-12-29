@@ -1,0 +1,40 @@
+PDU - PostgreSQL Data Unloader
+Copyright (c) 2024-2025 ZhangChen
+
+This product includes software developed by third parties:
+
+================================================================================
+1. PostgreSQL Global Development Group
+================================================================================
+
+Files containing PostgreSQL-derived code:
+- decode.c, decode.h
+- read.c, read.h
+- pg_xlogreader.c, pg_xlogreader.h
+- pg_walgettx.c, pg_walgettx.h
+- stringinfo.c, stringinfo.h
+- basic.h
+- pg_xlogdefs.h
+
+License: PostgreSQL License
+Copyright (c) 1996-2021, PostgreSQL Global Development Group
+Portions Copyright (c) 1994, Regents of the University of California
+
+See LICENSE-PostgreSQL for the full license text.
+
+================================================================================
+2. NIPPON TELEGRAPH AND TELEPHONE CORPORATION (NTT)
+================================================================================
+
+Files:
+- parray.c
+- parray.h
+
+License: PostgreSQL License
+Copyright (c) 2009-2011, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+
+Source: pg_rman project (https://github.com/ossc-db/pg_rman)
+
+See LICENSE-PostgreSQL for the full license text.
+
+================================================================================
