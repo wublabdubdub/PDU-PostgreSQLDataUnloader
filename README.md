@@ -1,5 +1,11 @@
 # PDU - PostgreSQL Data Unloader
 
+[![website](https://img.shields.io/badge/website-pduzc.com-0a6fe8?style=flat-square&logo=firefoxbrowser&logoColor=white)](https://pduzc.com/)
+[![features](https://img.shields.io/badge/features-overview-1f6feb?style=flat-square&logo=postgresql&logoColor=white)](https://pduzc.com/features)
+[![docs](https://img.shields.io/badge/docs-instant%20recovery-4c8eda?style=flat-square&logo=readthedocs&logoColor=white)](https://pduzc.com/docs/instant-recovery)
+[![quickstart](https://img.shields.io/badge/quickstart-ready-009688?style=flat-square)](https://pduzc.com/quickstart)
+[![license](https://img.shields.io/badge/license-BSL--1.1-6f42c1?style=flat-square)](LICENSE)
+
 [English](#english) | [中文](#中文)
 
 ---
@@ -10,7 +16,7 @@
 PDU (PostgreSQL Data Unloader) is a comprehensive disaster recovery and data extraction tool for PostgreSQL databases (versions 14-18). It can read PostgreSQL data files directly without requiring a running database instance, making it ideal for disaster recovery, forensic analysis, and data extraction scenarios.
 
 
-### Project Introduction
+### [Project Introduction](https://pduzc.com/)
 Consider these scenarios in a PostgreSQL database:  
 1. **The database integrity is completely corrupted and cannot be opened.**
 2. **Data is accidentally deleted/updated.**
@@ -31,7 +37,7 @@ This project, **PDU (PostgreSQL Data Unloader)**, is a tool that integrates data
 The PDU tool's file structure is simple, consisting of only two parts: the ***pdu executable file and the pdu.ini configuration file***. The overall design philosophy is to lower the learning cost for users.
 
 
-### Core Capabilities
+### [Core Capabilities](https://pduzc.com/features)
 
 PDU handles four critical failure scenarios:
 
@@ -83,7 +89,7 @@ make
 
 This will produce the `pdu` executable.
 
-### Quick Start
+### [Quick Start](https://pduzc.com/quickstart)
 
 1. **Configure** `pdu.ini` with your PostgreSQL data directory:
    ```ini
@@ -142,7 +148,7 @@ This will produce the `pdu` executable.
 | `dropscan;` | Scan disk for dropped table fragments |
 | `exit;` or `\q;` | Exit PDU |
 
-### Recovery Workflows
+### [Recovery Workflows](https://pduzc.com/docs/instant-recovery)
 
 #### DELETE/UPDATE Recovery
 ```
@@ -176,9 +182,11 @@ Exported data is saved in the current working directory under:
 <a name="中文"></a>
 ## 中文
 
+### [项目介绍](https://pduzc.com/)
+
 PDU（PostgreSQL Data Unloader）是一款专业的 PostgreSQL 数据库灾难恢复和数据提取工具，支持 PostgreSQL 14-18 版本。它可以直接读取 PostgreSQL 数据文件，无需运行中的数据库实例，特别适用于灾难恢复、数据取证和数据提取场景。
 
-### 核心能力
+### [核心能力](https://pduzc.com/features)
 
 PDU 可处理四种关键故障场景：
 
@@ -230,7 +238,7 @@ make
 
 将会生成`pdu` 可执行文件.
 
-### 快速开始
+### [快速开始](https://pduzc.com/quickstart)
 
 1. **配置** `pdu.ini`，设置 PostgreSQL 数据目录：
    ```ini
@@ -289,7 +297,7 @@ make
 | `dropscan;` | 扫描磁盘查找被 DROP 表的碎片 |
 | `exit;` 或 `\q;` | 退出 PDU |
 
-### 恢复工作流程
+### [恢复工作流程](https://pduzc.com/docs/instant-recovery)
 
 #### DELETE/UPDATE 恢复
 ```
