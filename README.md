@@ -150,32 +150,17 @@ This will produce the `pdu` executable.
 
 ### [Recovery Workflows](https://pduzc.com/docs/instant-recovery)
 
-#### DELETE/UPDATE Recovery
-```
-PDU> b;                          -- Initialize
-PDU> use mydb;
-PDU> set public;
-PDU> param startwal 0000000100000000000000XX;  -- Set starting WAL
-PDU> scan;                       -- Scan WAL files
-PDU> restore del mytable;        -- Restore deleted records
-PDU> restore upd mytable;        -- Restore original values before UPDATE
-```
+> Six fast paths—skim the scenario, then jump to the full guide.
 
-#### DROP Table Recovery
-```
-PDU> b;
-PDU> use mydb;
-PDU> dropscan;                   -- Scan disk for fragments
-PDU> \dt;                        -- List recovered tables
-PDU> unload recovered_table;     -- Export recovered data
-```
+| Scenario | What it solves | Guide |
+| --- | --- | --- |
+| Corrupted Instance | PostgreSQL cannot start; pull data straight from disk. | [Open](https://pduzc.com/docs/instant-recovery/corrupted-instance) |
+| Corrupted Datafile | A specific datafile is damaged or missing; salvage reachable data. | [Open](https://pduzc.com/docs/instant-recovery/corrupted-datafile) |
+| Corrupted Database | Whole database feels broken; reconstruct catalog and data. | [Open](https://pduzc.com/docs/instant-recovery/corrupted-database) |
+| Deleted Records | Rows were deleted; replay WAL to bring them back. | [Open](https://pduzc.com/docs/instant-recovery/deleted-records) |
+| Updated Records | Bad UPDATE overwrote values; roll back with WAL analysis. | [Open](https://pduzc.com/docs/instant-recovery/updated-records) |
+| Dropped Tables | Tables were dropped; scan disk fragments to rebuild them. | [Open](https://pduzc.com/docs/instant-recovery/dropped-tables) |
 
-### Output
-
-Exported data is saved in the current working directory under:
-- `<database>/<schema>/<table>.csv` - Table data
-- `<database>/meta/` - Schema metadata
-- `<database>/toastmeta/` - TOAST metadata
 
 ---
 
@@ -263,7 +248,7 @@ make
    PDU> \dn;             -- 列出模式
    PDU> set public;      -- 选择模式
    PDU> \dt;             -- 列出表
-   PDU> \dt+ mytable;    -- 查看表结构
+   PDU> \d+ mytable;    -- 查看表结构
    PDU> unload mytable;  -- 导出表数据
    ```
 
@@ -299,32 +284,17 @@ make
 
 ### [恢复工作流程](https://pduzc.com/docs/instant-recovery)
 
-#### DELETE/UPDATE 恢复
-```
-PDU> b;                          -- 初始化
-PDU> use mydb;
-PDU> set public;
-PDU> param startwal 0000000100000000000000XX;  -- 设置起始 WAL
-PDU> scan;                       -- 扫描 WAL 文件
-PDU> restore del mytable;        -- 恢复已删除记录
-PDU> restore upd mytable;        -- 恢复 UPDATE 前的原始值
-```
+> 六条快速通道——先看场景概要，完整步骤请点击跳转。
 
-#### DROP 表恢复
-```
-PDU> b;
-PDU> use mydb;
-PDU> dropscan;                   -- 扫描磁盘碎片
-PDU> \dt;                        -- 列出恢复的表
-PDU> unload recovered_table;     -- 导出恢复的数据
-```
+| 场景 | 适用情况 | 指南 |
+| --- | --- | --- |
+| 实例损坏 | PostgreSQL 起不来；直接从磁盘拉取数据。 | [查看](https://pduzc.com/docs/instant-recovery/corrupted-instance) |
+| 数据文件损坏 | 某个数据文件坏了/缺失；尽可能抢救可读数据。 | [查看](https://pduzc.com/docs/instant-recovery/corrupted-datafile) |
+| 数据库损坏 | 整个数据库异常；重建目录并恢复数据。 | [查看](https://pduzc.com/docs/instant-recovery/corrupted-database) |
+| 记录被删除 | 行被误删；用 WAL 回放找回。 | [查看](https://pduzc.com/docs/instant-recovery/deleted-records) |
+| 记录被更新 | 错误 UPDATE 覆盖了值；借助 WAL 撤销。 | [查看](https://pduzc.com/docs/instant-recovery/updated-records) |
+| 表被删除 | 表被 DROP；扫描磁盘碎片重建。 | [查看](https://pduzc.com/docs/instant-recovery/dropped-tables) |
 
-### 输出位置
-
-导出的数据保存在当前工作目录下：
-- `<database>/<schema>/<table>.csv` - 表数据
-- `<database>/meta/` - 模式元数据
-- `<database>/toastmeta/` - TOAST 元数据
 
 ---
 
