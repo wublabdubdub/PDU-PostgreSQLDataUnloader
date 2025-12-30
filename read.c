@@ -492,7 +492,7 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
                             char *xman=xmanDecode(dropExist1,allDesc,attr2Process,&block[itemOffset],itemSize,BOOTTYPE,logSucc,logErr);
                             datafileExist=1;
 
-                            if(strcmp(BOOTTYPE,DB_BOOTTYPE) == 0){
+                            if(strcmp(BOOTTYPE,DB_BOOTTYPE) == 0 && strcmp(xman,"NoWayOut") != 0){
 
                                 char *target =  get_field('\t',xman,2) ;
 

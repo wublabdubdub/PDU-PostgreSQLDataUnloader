@@ -1425,9 +1425,8 @@ print_tens_normal:
             uncompressed_size = VARDATA_COMPRESSED_GET_EXTSIZE(input_buffer);
 
             if (uncompressed_size > sizeof(decompression_storage)) {
-                printf("THE VARLENA IS %d BYTES , TOO LONG FOR decompression_storage ARRAY\n",
+                printf("uncompressed_size is %d BYTES, Can not get into decompression_storage\n",
                        uncompressed_size);
-                emitFieldValue("(DATA COMPRESSED)");
                 *bytes_processed = skip_bytes + compressed_size;
                 parse_result = 0;
                 break;
@@ -1864,9 +1863,8 @@ dissectVarlena(const char *input_data, unsigned int data_length, unsigned int *c
 			uncompressed_size = VARDATA_COMPRESSED_GET_EXTSIZE(current_pos);
 
 			if (uncompressed_size > sizeof(decompression_storage)) {
-				printf("THE VARLENA IS %d BYTES , TOO LONG FOR decompression_storage ARRAY\n",
+                printf("uncompressed_size is %d BYTES, Can not get into decompression_storage\n",
 					   uncompressed_size);
-				emitFieldValue("(DATA COMPRESSED)");
 				*consumed_bytes = skip_bytes + compressed_size;
 				parse_result = 0;
 				break;
