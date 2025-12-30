@@ -8,7 +8,7 @@
  * This code is released under the PostgreSQL License.
  * See LICENSE-PostgreSQL.
  *
- * Modifications by ZhangChen licensed under BSL 1.1;
+ * Modifications by ZhangChen licensed under the Apache License, Version 2.0;
  * see LICENSE.
  *
  *-------------------------------------------------------------------------

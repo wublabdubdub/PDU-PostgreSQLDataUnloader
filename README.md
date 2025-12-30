@@ -4,7 +4,7 @@
 [![features](https://img.shields.io/badge/features-overview-1f6feb?style=flat-square&logo=postgresql&logoColor=white)](https://pduzc.com/features)
 [![docs](https://img.shields.io/badge/docs-instant%20recovery-4c8eda?style=flat-square&logo=readthedocs&logoColor=white)](https://pduzc.com/docs/instant-recovery)
 [![quickstart](https://img.shields.io/badge/quickstart-ready-009688?style=flat-square)](https://pduzc.com/quickstart)
-[![license](https://img.shields.io/badge/license-BSL--1.1-6f42c1?style=flat-square)](LICENSE)
+[![license](https://img.shields.io/badge/license-Apache--2.0-0d47a1?style=flat-square)](LICENSE)
 
 [English](#english) | [中文](#中文)
 
@@ -330,14 +330,9 @@ PDU> unload recovered_table;     -- 导出恢复的数据
 
 ## License
 
-This project is licensed under the Business Source License 1.1 (BSL 1.1).
+This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the full license text.
 
-- **Licensor**: ZhangChen
-- **Licensed Work**: PDU (PostgreSQL Data Unloader)
-- **Change Date**: 2029-01-01
-- **Change License**: Apache License, Version 2.0
-
-See [LICENSE](LICENSE) for the full license text.
+Historical note: earlier drafts used the Business Source License 1.1; starting from this release the project is under Apache-2.0 to ensure open-source compatibility.
 
 ### Third-Party Code
 

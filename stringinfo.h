@@ -15,7 +15,7 @@
  * PostgreSQL-derived portions licensed under the PostgreSQL License;
  * see LICENSE-PostgreSQL.
  *
- * Original portions by ZhangChen licensed under BSL 1.1;
+ * Original portions by ZhangChen licensed under the Apache License, Version 2.0;
  * see LICENSE.
  *
  * src/include/lib/stringinfo.h
