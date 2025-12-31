@@ -44,7 +44,6 @@ PDU handles four critical failure scenarios:
 1. **Database Corruption** - Extract data when the database cannot start
 2. **Accidental DELETE/UPDATE** - Recover original data from archived WAL files
 3. **Deleted Data Files** - Direct extraction from remaining data files
-4. **Dropped Tables** - Recovery of dropped tables without backups (unique capability)
 
 ### Features
 
@@ -52,20 +51,16 @@ PDU handles four critical failure scenarios:
 - **Data Export**: Export table data to CSV or SQL COPY format
 - **WAL Analysis**: Parse WAL (Write-Ahead Log) files for transaction recovery
 - **Deleted Data Recovery**: Recover deleted or truncated data from data files
-- **DROP Table Recovery**: Reconstruct dropped tables from disk fragments
 - **TOAST Support**: Handle large object (TOAST) data decompression with LZ4
-- **Multi-threaded**: Efficient parallel processing for large databases
 
 ### Supported Data Types
 
 **Fully Supported:**
 - Numeric types (integers, floats, numeric/decimal)
 - Temporal data (date, time, timestamp, interval)
-- Text and binary data (varchar, text, bytea)
-- JSON/JSONB structures
-- Arrays of basic types
+- Text and binary data (varchar, text)
+- JSON/XML structures
 - UUID and network address types (inet, cidr, macaddr)
-- Geometric types (point, line, polygon, circle, etc.)
 
 **Not Supported:**
 - User-defined enumeration types
@@ -159,7 +154,6 @@ This will produce the `pdu` executable.
 | Corrupted Database | Whole database feels broken; reconstruct catalog and data. | [Open](https://pduzc.com/docs/instant-recovery/corrupted-database) |
 | Deleted Records | Rows were deleted; replay WAL to bring them back. | [Open](https://pduzc.com/docs/instant-recovery/deleted-records) |
 | Updated Records | Bad UPDATE overwrote values; roll back with WAL analysis. | [Open](https://pduzc.com/docs/instant-recovery/updated-records) |
-| Dropped Tables | Tables were dropped; scan disk fragments to rebuild them. | [Open](https://pduzc.com/docs/instant-recovery/dropped-tables) |
 
 
 ---
@@ -178,7 +172,6 @@ PDU 可处理四种关键故障场景：
 1. **数据库损坏** - 在数据库无法启动时提取数据
 2. **误执行 DELETE/UPDATE** - 从归档 WAL 文件恢复原始数据
 3. **数据文件被删除** - 从残留数据文件中直接提取
-4. **表被 DROP** - 无备份情况下恢复被删除的表（独特能力）
 
 ### 功能特性
 
@@ -186,20 +179,16 @@ PDU 可处理四种关键故障场景：
 - **数据导出**：将表数据导出为 CSV 或 SQL COPY 格式
 - **WAL 分析**：解析 WAL（预写日志）文件进行事务恢复
 - **删除数据恢复**：从数据文件中恢复已删除或截断的数据
-- **DROP 表恢复**：从磁盘碎片重建被删除的表
 - **TOAST 支持**：处理大对象（TOAST）数据的 LZ4 解压
-- **多线程**：高效的并行处理，适用于大型数据库
 
 ### 支持的数据类型
 
 **完全支持：**
 - 数值类型（整数、浮点数、numeric/decimal）
 - 时间类型（date、time、timestamp、interval）
-- 文本和二进制（varchar、text、bytea）
-- JSON/JSONB 结构
-- 基本类型数组
+- 文本和二进制（varchar、text）
+- JSON/XML 结构
 - UUID 和网络地址类型（inet、cidr、macaddr）
-- 几何类型（point、line、polygon、circle 等）
 
 **不支持：**
 - 用户自定义枚举类型
@@ -293,7 +282,6 @@ make
 | 数据库损坏 | 整个数据库异常；重建目录并恢复数据。 | [查看](https://pduzc.com/docs/instant-recovery/corrupted-database) |
 | 记录被删除 | 行被误删；用 WAL 回放找回。 | [查看](https://pduzc.com/docs/instant-recovery/deleted-records) |
 | 记录被更新 | 错误 UPDATE 覆盖了值；借助 WAL 撤销。 | [查看](https://pduzc.com/docs/instant-recovery/updated-records) |
-| 表被删除 | 表被 DROP；扫描磁盘碎片重建。 | [查看](https://pduzc.com/docs/instant-recovery/dropped-tables) |
 
 
 ---
