@@ -789,7 +789,7 @@ serializeInt32(const char *src, unsigned int avail, unsigned int *used)
 	uintptr_t location = (uintptr_t) src;
 	unsigned int gap = (unsigned int)(((location + 3) & ~3UL) - location);
 	const char *dataStart;
-	int32 rawValue;
+	uint32 rawValue;
 	char repr[16];
 	char *cursor;
 	uint32 magnitude;
@@ -801,10 +801,10 @@ serializeInt32(const char *src, unsigned int avail, unsigned int *used)
 	dataStart = src + gap;
 	avail -= gap;
 
-	if (avail < sizeof(int32))
+	if (avail < sizeof(uint32))
 		return PARSE_ERR_INSUFFICIENT;
 
-	rawValue = *(int32 *) dataStart;
+	rawValue = *(uint32 *) dataStart;
 
 	cursor = repr + sizeof(repr) - 1;
 	*cursor = '\0';
@@ -833,7 +833,7 @@ serializeInt32(const char *src, unsigned int avail, unsigned int *used)
 		*--cursor = '-';
 
 	emitFieldValue(cursor);
-	*used = sizeof(int32) + gap;
+	*used = sizeof(uint32) + gap;
 	return PARSE_OK;
 }
 

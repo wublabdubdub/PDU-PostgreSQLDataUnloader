@@ -37,7 +37,7 @@
 #include <fcntl.h>
 #include <lz4.h>
 
-#define PG_VERSION_NUM 15
+#define PG_VERSION_NUM 17
 
 //#define CN
 #define EN
