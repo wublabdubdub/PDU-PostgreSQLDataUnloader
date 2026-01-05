@@ -791,7 +791,7 @@ harray* bootAttrStruct(char *filename){
             exit(1);
         }
 
-        int relidInt = atoi(oneattroid->relid);
+        uint32 relidInt = atoi(oneattroid->relid);
         harray_append(attr_harray,HARRAYATTR,oneattroid,relidInt);
     }
 
@@ -1918,37 +1918,32 @@ int tabVolSort(const void *a, const void *b) {
 void getTabSize(TABSIZEstruct *tabVol){
     int i;
     int j;
-
+    
     for( i = 0 ;i< tabSize ; i++ ){
 
         uint64 totalSize = 0;
         char tabPath[600]="";
         char tabToastPath[600]="";
-        for( j = 0; j < 500; j++){
+
+        for( j = 0; j < 500; j++){//总共支持500GB的单表大小
             if (j == 0){
                 sprintf(tabPath,"%s/%s",CURDBFullPath,taboid[i].filenode);
+                sprintf(tabToastPath,"%s/%s",CURDBFullPath,taboid[i].toastoid);
             }
             else{
                 sprintf(tabPath,"%s/%s.%d",CURDBFullPath,taboid[i].filenode,j);
+                sprintf(tabToastPath,"%s/%s.%d",CURDBFullPath,taboid[i].toastoid,j);
             }
-            struct stat file_stat;
-            if (stat(tabPath, &file_stat) != -1) {
-                totalSize = totalSize + file_stat.st_size;
+            struct stat file_stat1;
+            if (stat(tabPath, &file_stat1) != -1 && strlen(taboid[i].filenode)!= 0 ) {
+                totalSize = totalSize + file_stat1.st_size;
             }
             else{
                 break;
             }
-        }
-        for( j = 0; j < 500; j++){
-            if (j == 0){
-                sprintf(tabToastPath,"%s/%s",CURDBFullPath,taboid[i].toastoid);
-            }
-            else{
-                sprintf(tabToastPath,"%s/%s.%d",CURDBFullPath,taboid[i].toastoid,j);
-            }
-            struct stat file_stat;
-            if (stat(tabToastPath, &file_stat) != -1) {
-                totalSize = totalSize + file_stat.st_size;
+            struct stat file_stat2;
+            if (stat(tabToastPath, &file_stat2) != -1) {
+                totalSize = totalSize + file_stat2.st_size;
             }
             else{
                 break;
@@ -1961,42 +1956,38 @@ void getTabSize(TABSIZEstruct *tabVol){
     qsort(tabVol, tabSize, sizeof(TABSIZEstruct), tabVolSort);
 }
 
-/**
- * getFormVol - Format volume size for display
- *
- * @vol: Raw volume value string
- * @ret: Output buffer for formatted string
- *
- * Converts raw byte count to human-readable format (KB, MB, GB).
- */
 void getFormVol(char *vol,char *ret){
-    if(strcmp(vol,"0") == 0){
+    if (!vol || !ret) {
+        return;
+    }
+    unsigned long long numvol = strtoull(vol, NULL, 10);
+    if (numvol == 0) {
         sprintf(ret,"0");
         return;
     }
-    double numvol = atof(vol);
-    double value;
-    value = numvol / (1024*1024*1024);
-    if (value >= 1 && value <= 1024) {
+
+    if (numvol >= (1024ULL * 1024 * 1024)) {
+        double value = (double)numvol / (1024 * 1024 * 1024);
         sprintf(ret,"%.2f GB",value);
         return;
     }
 
-    value = numvol / (1024*1024);
-    if (value >= 1 && value <= 1024) {
+    if (numvol >= (1024ULL * 1024)) {
+        double value = (double)numvol / (1024 * 1024);
         sprintf(ret,"%.2f MB",value);
         return;
     }
 
-    value = numvol / 1024;
-    if (value >= 1 && value <= 1024) {
+    if (numvol >= 1024ULL) {
+        double value = (double)numvol / 1024;
         sprintf(ret,"%.2f KB",value);
         return;
     }
 
-    sprintf(ret,"%lu Bytes",numvol);
+    sprintf(ret,"%llu Bytes",numvol);
     return;
 }
+
 
 /**
  * SHOW - Display database objects

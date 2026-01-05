@@ -1604,8 +1604,9 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
     int prefixsize = strlen(tabname)+50;
     int suffixsize = 10;
     int isSET = 0;
-    int setConfronted = 1;
-    for(int i=0;i<parray_num(newxman_arr);i++){
+    int setConfronted = 1;//是否当前SET后面还没有值
+    int setConfrontedforSame = 1;//是否当前SET后面还没有值,给sameprefix用的
+    for(int i=0;i<parray_num(newxman_arr);i++){//计算前缀和后缀的尺寸，用于分配字符串
         char *new = parray_get(newxman_arr,i);
         char *old = parray_get(oldxman_arr,i);
         pg_attributeDesc *oneDesc = &allDesc[i];
@@ -1620,9 +1621,10 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
         suffixsize += 10;
     }
 
-    char *prefix =(char*)malloc(sizeof(char)*(suffixsize+prefixsize));
-    char *suffix =(char*)malloc(sizeof(char)*suffixsize);
-    char *samePrefix =(char*)malloc(sizeof(char)*suffixsize);
+    char *prefix =(char*)malloc(sizeof(char)*(suffixsize+prefixsize));//update 表名 set 列名=旧值
+    char *suffix =(char*)malloc(sizeof(char)*suffixsize);//where ( 列名=新值 AND) x N
+    char *samePrefix =(char*)malloc(sizeof(char)*suffixsize);//update 表名 set 列名=旧值 
+                                                            //固定拼接一次旧值，以防相同的情况下没有数据
     memset(samePrefix,0,suffixsize);
     sprintf(prefix,"UPDATE %s SET ",tabname);
     sprintf(suffix," WHERE ");
@@ -1633,17 +1635,17 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
 
         pg_attributeDesc *oneDesc = &allDesc[i];
 
-        strcat(suffix,oneDesc->attname);
+        strcat(suffix,oneDesc->attname);//添加where的列名
         if(strcmp(new,"NULL") != 0){
             strcat(suffix,"=");
         }
         else{
             strcat(suffix," is ");
         }
-        strcat(suffix,new);
+        strcat(suffix,new);//添加where的变量值
         if(i != parray_num(newxman_arr)-1)
             strcat(suffix," AND ");
-        if(strcmp(old,new) != 0){
+        if(strcmp(old,new) != 0){//添加update的主体
             if(!setConfronted){
                 strcat(prefix," AND ");
             }
@@ -1653,17 +1655,18 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
             strcat(prefix,old);
             isSET = 1;
         }
-        if(!setConfronted){
+        //固定拼接旧值
+        if(!setConfrontedforSame){
             strcat(samePrefix," AND ");
         }
-        setConfronted = 0;
+        setConfrontedforSame = 0;
         strcat(samePrefix,oneDesc->attname);
         strcat(samePrefix,"=");
         strcat(samePrefix,old);
     }
     char *ret = NULL;
     int yy=strlen(prefix)+strlen(suffix);
-    if(!isSET){
+    if(!isSET){//如果前后的update字段值相同，就返回固定的旧值
         char *finalPrefix = (char*)malloc(sizeof(char)*(strlen(prefix)+strlen(samePrefix)+10));
         sprintf(finalPrefix,"%s%s",prefix,samePrefix);
         ret = (char*)malloc(strlen(finalPrefix)+strlen(suffix)+10);
@@ -1673,7 +1676,7 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
         ret = (char*)malloc(strlen(prefix)+strlen(suffix)+10);
         sprintf(ret,"%s\n%s;",prefix,suffix);
     }
-
+    
     free(suffix);
     free(prefix);
     free(samePrefix);
@@ -1681,6 +1684,7 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
     prefix=NULL;
     return ret;
 }
+
 
 void trim_char(char *str, char c) {
     if (!str || *str == '\0')
