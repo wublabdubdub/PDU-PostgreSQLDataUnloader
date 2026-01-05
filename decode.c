@@ -44,6 +44,7 @@ typedef enum {
 static int serializeInt8(const char *src, unsigned int avail, unsigned int *used);
 static int serializeInt16(const char *src, unsigned int avail, unsigned int *used);
 static int serializeInt32(const char *src, unsigned int avail, unsigned int *used);
+static int dbserializeUInt32(const char *src, unsigned int avail, unsigned int *used);
 static int serializeInt64(const char *src, unsigned int avail, unsigned int *used);
 
 static int serializeFloat32(const char *src, unsigned int avail, unsigned int *used);
@@ -80,6 +81,7 @@ static const ColumnTypeHandler typeHandlerRegistry[] = {
 	{"serial",       serializeInt32,         4,   4},
 	{"bigserial",    serializeInt64,         8,   8},
 	{"oid",          serializeInt32,         4,   4},
+	{"dboid",        dbserializeUInt32,      4,   4},
 	{"xid",          serializeInt32,         4,   4},
 	{"real",         serializeFloat32,       4,   4},
 	{"float4",       serializeFloat32,       4,   4},
@@ -789,6 +791,73 @@ serializeInt32(const char *src, unsigned int avail, unsigned int *used)
 	uintptr_t location = (uintptr_t) src;
 	unsigned int gap = (unsigned int)(((location + 3) & ~3UL) - location);
 	const char *dataStart;
+	int32 rawValue;
+	char repr[16];
+	char *cursor;
+	uint32 magnitude;
+	bool signBit;
+
+	if (avail < gap)
+		return PARSE_ERR_ALIGNMENT;
+
+	dataStart = src + gap;
+	avail -= gap;
+
+	if (avail < sizeof(int32))
+		return PARSE_ERR_INSUFFICIENT;
+
+	rawValue = *(int32 *) dataStart;
+
+	cursor = repr + sizeof(repr) - 1;
+	*cursor = '\0';
+
+	signBit = (rawValue < 0);
+	magnitude = signBit ? (uint32)(-(int64)rawValue) : (uint32)rawValue;
+
+	if (magnitude == 0) {
+		*--cursor = '0';
+	} else {
+		while (magnitude >= 100) {
+			uint32 twoDigits = magnitude % 100;
+			magnitude /= 100;
+			*--cursor = '0' + (twoDigits % 10);
+			*--cursor = '0' + (twoDigits / 10);
+		}
+		if (magnitude >= 10) {
+			*--cursor = '0' + (magnitude % 10);
+			*--cursor = '0' + (magnitude / 10);
+		} else {
+			*--cursor = '0' + magnitude;
+		}
+	}
+
+	if (signBit)
+		*--cursor = '-';
+
+	emitFieldValue(cursor);
+	*used = sizeof(int32) + gap;
+	return PARSE_OK;
+}
+
+
+/**
+ * serializeInt32 - Decode int32 value from buffer
+ *
+ * @src:   Pointer to source data buffer
+ * @avail: Available buffer size
+ * @used:  Output parameter for bytes consumed
+ *
+ * Decodes a 32-bit integer from the buffer and converts it to string.
+ * Uses divide-and-conquer optimization to reduce division operations.
+ *
+ * Returns: PARSE_OK on success, negative ParseResultCode on error
+ */
+static int
+dbserializeUInt32(const char *src, unsigned int avail, unsigned int *used)
+{
+	uintptr_t location = (uintptr_t) src;
+	unsigned int gap = (unsigned int)(((location + 3) & ~3UL) - location);
+	const char *dataStart;
 	uint32 rawValue;
 	char repr[16];
 	char *cursor;
@@ -836,6 +905,7 @@ serializeInt32(const char *src, unsigned int avail, unsigned int *used)
 	*used = sizeof(uint32) + gap;
 	return PARSE_OK;
 }
+
 
 /**
  * serializeInt8 - Decode tinyint (int8) value from buffer

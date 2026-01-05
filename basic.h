@@ -70,35 +70,35 @@
 
 
 #if PG_VERSION_NUM == 18 
-#define DB_ATTR "oid,name,oid,int,char,bool,bool,bool,int,xid,xid,oid,pass"
+#define DB_ATTR "dboid,name,oid,int,char,bool,bool,bool,int,xid,xid,oid,pass"
 #define SCH_ATTR "oid,name,pass"
 #define CLASS_ATTR "oid,name,oid,oid,oid,oid,oid,oid,oid,int,bool,int,int,oid,bool,bool,char,char,smallint,pass"
 #define ATTR_ATTR "oid,name,oid,smallint,smallint,int,smallint,bool,char,pass"
 #define TYPE_ATTR "oid,name,pass"
 
 #elif PG_VERSION_NUM == 17 
-#define DB_ATTR "oid,name,oid,int,char,bool,bool,bool,int,xid,xid,oid,pass"
+#define DB_ATTR "dboid,name,oid,int,char,bool,bool,bool,int,xid,xid,oid,pass"
 #define SCH_ATTR "oid,name,pass"
 #define CLASS_ATTR "oid,name,oid,oid,oid,oid,oid,oid,oid,int,int,int,oid,bool,bool,char,char,smallint,pass"
 #define ATTR_ATTR "oid,name,oid,smallint,smallint,int,int,smallint,bool,char,pass"
 #define TYPE_ATTR "oid,name,pass"
 
 #elif PG_VERSION_NUM == 16
-#define DB_ATTR "oid,name,oid,int,char,bool,bool,int,xid,xid,oid,pass"
+#define DB_ATTR "dboid,name,oid,int,char,bool,bool,int,xid,xid,oid,pass"
 #define SCH_ATTR "oid,name,pass"
 #define CLASS_ATTR "oid,name,oid,oid,oid,oid,oid,oid,oid,int,int,int,oid,bool,bool,char,char,smallint,pass"
 #define ATTR_ATTR "oid,name,oid,smallint,smallint,int,int,smallint,bool,char,pass"
 #define TYPE_ATTR "oid,name,pass"
 
 #elif PG_VERSION_NUM == 15
-#define DB_ATTR "oid,name,oid,int,char,bool,bool,int,xid,xid,oid,pass"
+#define DB_ATTR "dboid,name,oid,int,char,bool,bool,int,xid,xid,oid,pass"
 #define SCH_ATTR "oid,name,pass"
 #define CLASS_ATTR "oid,name,oid,oid,oid,oid,oid,oid,oid,int,int,int,oid,bool,bool,char,char,smallint,pass"
 #define ATTR_ATTR "oid,name,oid,int,smallint,smallint,int,int,int,bool,char,char,pass"
 #define TYPE_ATTR "oid,name,pass"
 
 #elif PG_VERSION_NUM == 14
-#define DB_ATTR "oid,name,oid,int,name,name,bool,bool,int,oid,xid,xid,oid,pass"
+#define DB_ATTR "dboid,name,oid,int,name,name,bool,bool,int,oid,xid,xid,oid,pass"
 #define SCH_ATTR "oid,name,pass"
 #define CLASS_ATTR "oid,name,oid,oid,oid,oid,oid,oid,oid,int,int,int,oid,bool,bool,char,char,smallint,pass"
 #define ATTR_ATTR "oid,name,oid,int,smallint,smallint,int,int,int,bool,char,char,pass"
