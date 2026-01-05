@@ -827,7 +827,7 @@ TABstruct* bootTabStruct(char *filename,int isCompleted){
             fscanf(file, "%s\t%s\t%s\t%s\t%s\t%s\n", taboid[i].oid, taboid[i].tab, taboid[i].nsp, taboid[i].filenode, taboid[i].toastoid, taboid[i].nattr);
             if(toastTaboid_harray != NULL){
                 if(strncmp(taboid[i].tab,"pg_toast_",9) == 0){
-                    int toastindex = atoi(taboid[i].oid);
+                    uint32 toastindex = atoi(taboid[i].oid);
                     TABstruct *ontaboid = (TABstruct*)malloc(sizeof(TABstruct));
                     strcpy(ontaboid->oid,taboid[i].oid);
                     strcpy(ontaboid->filenode,taboid[i].filenode);

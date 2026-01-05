@@ -44,7 +44,7 @@ typedef enum {
 static int serializeInt8(const char *src, unsigned int avail, unsigned int *used);
 static int serializeInt16(const char *src, unsigned int avail, unsigned int *used);
 static int serializeInt32(const char *src, unsigned int avail, unsigned int *used);
-static int dbserializeUInt32(const char *src, unsigned int avail, unsigned int *used);
+static int serializeUInt32(const char *src, unsigned int avail, unsigned int *used);
 static int serializeInt64(const char *src, unsigned int avail, unsigned int *used);
 
 static int serializeFloat32(const char *src, unsigned int avail, unsigned int *used);
@@ -80,8 +80,7 @@ static const ColumnTypeHandler typeHandlerRegistry[] = {
 	{"smallserial",  serializeInt16,         2,   2},
 	{"serial",       serializeInt32,         4,   4},
 	{"bigserial",    serializeInt64,         8,   8},
-	{"oid",          serializeInt32,         4,   4},
-	{"dboid",        dbserializeUInt32,      4,   4},
+	{"oid",          serializeUInt32,        4,   4},
 	{"xid",          serializeInt32,         4,   4},
 	{"real",         serializeFloat32,       4,   4},
 	{"float4",       serializeFloat32,       4,   4},
@@ -853,7 +852,7 @@ serializeInt32(const char *src, unsigned int avail, unsigned int *used)
  * Returns: PARSE_OK on success, negative ParseResultCode on error
  */
 static int
-dbserializeUInt32(const char *src, unsigned int avail, unsigned int *used)
+serializeUInt32(const char *src, unsigned int avail, unsigned int *used)
 {
 	uintptr_t location = (uintptr_t) src;
 	unsigned int gap = (unsigned int)(((location + 3) & ~3UL) - location);

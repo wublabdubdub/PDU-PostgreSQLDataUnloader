@@ -2551,6 +2551,7 @@ int restoreUPDATE(pg_attributeDesc *allDesc,XLogReaderState *record,parray *Tx_p
 			sprintf(elem->LSN, "%X/%08X", LSN_FORMAT_ARGS(lsn));
 			elem->blk = oldblk;
 			parray_append(LsnBlkInfos,elem);
+			ErrBlkNotFound(oldblk,elem->LSN);
 			FPIErrcount++;
 			return CONTINUE_RET;
 		}
