@@ -1,0 +1,32 @@
+<svg width="1200" height="260" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="300" fill="#ffffff"/>
+
+  <!-- Shield Logo - Using the actual icon from website -->
+  <g transform="translate(180, 100) scale(3.5)">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+          fill="none"
+          stroke="#eab308"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+  </g>
+
+  <!-- Text content - matching website spacing with proper word spacing -->
+  <g transform="translate(295, 165)">
+    <!-- PostgreSQL - P in blue (#1AA7FF), rest in black -->
+    <text x="0" y="-10" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="700">
+      <tspan fill="#1AA7FF">P</tspan><tspan fill="#000000">ostgreSQL</tspan>
+    </text>
+
+    <!-- Data - D in blue (#1AA7FF), rest in black, with proper spacing -->
+    <text x="348" y="-10" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="700">
+      <tspan fill="#1AA7FF">D</tspan><tspan fill="#000000">ata</tspan>
+    </text>
+
+    <!-- Unloader - U in blue (#1AA7FF), rest in black, with same spacing as PostgreSQL to Data -->
+    <text x="490" y="-10" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="700">
+      <tspan fill="#1AA7FF">U</tspan><tspan fill="#000000">nloader</tspan>
+    </text>
+  </g>
+</svg>
