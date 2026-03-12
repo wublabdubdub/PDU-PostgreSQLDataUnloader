@@ -30,7 +30,13 @@ initStringInfo(StringInfo str)
 {
 	int			size = 1024;
 
-	str->data = (char *) malloc(size);
+	str->data = (char *) pdu_malloc(size);
+	if (!str->data) {
+		str->maxlen = 0;
+		str->len = 0;
+		str->cursor = 0;
+		return;
+	}
 	str->maxlen = size;
 	resetStringInfo(str);
 }

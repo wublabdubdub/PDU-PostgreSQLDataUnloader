@@ -72,16 +72,16 @@ int parseCmd(char command[MiddleAllocSize])
         while (token != NULL)
         {
             if( cmdcount==1 ){
-                strcpy(former,token);
+                snprintf(former,sizeof(former),"%s",token);
             }
             else if (cmdcount ==2){
-                strcpy(latter,token);
+                snprintf(latter,sizeof(latter),"%s",token);
             }
             else if (cmdcount ==3){
-                strcpy(third,token);
+                snprintf(third,sizeof(third),"%s",token);
             }
             else if (cmdcount ==4){
-                strcpy(fourth,token);
+                snprintf(fourth,sizeof(fourth),"%s",token);
             }
             token = strtok(NULL, " ");
             cmdcount++;

@@ -242,13 +242,13 @@ static void sub_hash_insert(SubHashTable *table, const IndexEntry *entry) {
     }
 
     /* Insert new entry */
-    SubHashNode *new_node = (SubHashNode*)malloc(sizeof(SubHashNode));
-    if (new_node) {
-        new_node->entry = *entry;
-        new_node->next = table->buckets[idx];
-        table->buckets[idx] = new_node;
-        table->entry_count++;
-    }
+    SubHashNode *new_node = (SubHashNode*)pdu_malloc(sizeof(SubHashNode));
+    if (!new_node)
+        return;
+    new_node->entry = *entry;
+    new_node->next = table->buckets[idx];
+    table->buckets[idx] = new_node;
+    table->entry_count++;
 }
 
 /**
@@ -305,13 +305,18 @@ static void sub_hash_destroy(SubHashTable *table) {
  * Creates the global hash table for mapping filenodes to sub tables.
  */
 static void global_hash_init() {
-    global_hash_table = (GlobalHashTable*)malloc(sizeof(GlobalHashTable));
-    if (global_hash_table) {
-        global_hash_table->bucket_count = 256;
-        global_hash_table->buckets = (GlobalHashNode**)calloc(
-            global_hash_table->bucket_count, sizeof(GlobalHashNode*));
-        pthread_mutex_init(&global_hash_table->lock, NULL);
+    global_hash_table = (GlobalHashTable*)pdu_malloc(sizeof(GlobalHashTable));
+    if (!global_hash_table)
+        return;
+    global_hash_table->bucket_count = 256;
+    global_hash_table->buckets = (GlobalHashNode**)pdu_calloc(
+        global_hash_table->bucket_count, sizeof(GlobalHashNode*));
+    if (!global_hash_table->buckets) {
+        free(global_hash_table);
+        global_hash_table = NULL;
+        return;
     }
+    pthread_mutex_init(&global_hash_table->lock, NULL);
 }
 
 /**
@@ -354,7 +359,7 @@ static SubHashTable* get_sub_hash_table(RelFileNumber filenode) {
     if (!sub_table) {
         sub_table = sub_hash_init(16, 0.75f);
         if (sub_table) {
-            GlobalHashNode *new_node = (GlobalHashNode*)malloc(sizeof(GlobalHashNode));
+            GlobalHashNode *new_node = (GlobalHashNode*)pdu_malloc(sizeof(GlobalHashNode));
             if (new_node) {
                 new_node->filenode = filenode;
                 new_node->sub_table = sub_table;
@@ -376,30 +381,32 @@ static void sync_sub_hash_to_disk(RelFileNumber filenode, SubHashTable *sub_tabl
     if (!sub_table || sub_table->entry_count == 0) return;
 
     char idx_path[MAXPGPATH];
-    sprintf(idx_path, "%s/%u.idx", FPWSegmentPath, filenode);
+    snprintf(idx_path, sizeof(idx_path), "%s/%u.idx", FPWSegmentPath, filenode);
     FILE *fp = fopen(idx_path, "wb");
     if (!fp) return;
 
     /* Collect all index entries */
-    IndexEntry *entries = (IndexEntry*)malloc(sub_table->entry_count * sizeof(IndexEntry));
-    if (entries) {
-        int pos = 0;
-        pthread_mutex_lock(&sub_table->lock);
-
-        for (int i = 0; i < sub_table->bucket_count; i++) {
-            SubHashNode *node = sub_table->buckets[i];
-            while (node) {
-                entries[pos++] = node->entry;
-                node = node->next;
-            }
-        }
-
-        pthread_mutex_unlock(&sub_table->lock);
-
-        /* Write to index file */
-        fwrite(entries, sizeof(IndexEntry), sub_table->entry_count, fp);
-        free(entries);
+    IndexEntry *entries = (IndexEntry*)pdu_malloc(sub_table->entry_count * sizeof(IndexEntry));
+    if (!entries) {
+        fclose(fp);
+        return;
     }
+    int pos = 0;
+    pthread_mutex_lock(&sub_table->lock);
+
+    for (int i = 0; i < sub_table->bucket_count; i++) {
+        SubHashNode *node = sub_table->buckets[i];
+        while (node) {
+            entries[pos++] = node->entry;
+            node = node->next;
+        }
+    }
+
+    pthread_mutex_unlock(&sub_table->lock);
+
+    /* Write to index file */
+    fwrite(entries, sizeof(IndexEntry), sub_table->entry_count, fp);
+    free(entries);
     fclose(fp);
 }
 
@@ -408,7 +415,7 @@ static void load_sub_hash_from_disk(RelFileNumber filenode, SubHashTable *sub_ta
     if (!sub_table) return;
 
     char idx_path[MAXPGPATH];
-    sprintf(idx_path, "%s/%u.idx", FPWSegmentPath, filenode);
+    snprintf(idx_path, sizeof(idx_path), "%s/%u.idx", FPWSegmentPath, filenode);
     FILE *fp = fopen(idx_path, "rb");
     if (!fp) return;
 
@@ -467,7 +474,7 @@ void FPW2File(BlockNumber blk, char* page, RelFileNumber filenode) {
     exists = sub_hash_find(sub_table, blk, &offset);
     pthread_mutex_unlock(&sub_table->lock);
 
-    sprintf(data_path, "%s/%u", FPWSegmentPath, filenode);
+    snprintf(data_path, sizeof(data_path), "%s/%u", FPWSegmentPath, filenode);
 
     if (exists) {
 
@@ -535,15 +542,17 @@ int FPWfromFile(BlockNumber blk, char* page, RelFileNumber filenode) {
     pthread_mutex_unlock(&sub_table->lock);
 
     if (!result){
-		LsnBlkInfo *elem = (LsnBlkInfo*)malloc(sizeof(LsnBlkInfo));
-		strcpy(elem->LSN,lsn);
+		LsnBlkInfo *elem = (LsnBlkInfo*)pdu_malloc(sizeof(LsnBlkInfo));
+		if (!elem)
+			return 0;
+		snprintf(elem->LSN, sizeof(elem->LSN), "%s", lsn);
 		elem->blk = blk;
 		parray_append(LsnBlkInfos,elem);
 
 		return 0;
 	}
 
-    sprintf(data_path, "%s/%u", FPWSegmentPath, filenode);
+    snprintf(data_path, sizeof(data_path), "%s/%u", FPWSegmentPath, filenode);
     fp = fopen(data_path, "rb");
     if (!fp) {
 
@@ -2419,7 +2428,7 @@ int restoreDEL(parray *Tx_parray,FILE *bootFile,decodeFunc *array2Process,xl_hea
 	if(txInTxArrayOrNot(currentTx,Tx_parray,restoreMode_there)){ /* If target tx and not toast round */
 		if(!FPWfileExist(blk,filenode)){ /* If FPW not found, report error */
 			LsnBlkInfo *elem = (LsnBlkInfo*)malloc(sizeof(LsnBlkInfo));
-			strcpy(elem->LSN,lsn);
+			snprintf(elem->LSN, sizeof(elem->LSN), "%s", lsn);
 			elem->blk = blk;
 			parray_append(LsnBlkInfos,elem);
 			#ifdef CN
@@ -2548,7 +2557,7 @@ int restoreUPDATE(pg_attributeDesc *allDesc,XLogReaderState *record,parray *Tx_p
 		/* ============= Process old data block ============= */
 		if(!FPWfromFile(oldblk,oldpage,filenode)){ /* If FPW not found, report error */
 			LsnBlkInfo *elem = (LsnBlkInfo*)malloc(sizeof(LsnBlkInfo));
-			sprintf(elem->LSN, "%X/%08X", LSN_FORMAT_ARGS(lsn));
+			snprintf(elem->LSN, sizeof(elem->LSN), "%X/%08X", LSN_FORMAT_ARGS(lsn));
 			elem->blk = oldblk;
 			parray_append(LsnBlkInfos,elem);
 			ErrBlkNotFound(oldblk,lsn);
@@ -2601,7 +2610,7 @@ int restoreUPDATE(pg_attributeDesc *allDesc,XLogReaderState *record,parray *Tx_p
 		else{
 			if(!FPWfromFile(newblk,newpage,filenode)){ /* If FPW not found, report error */
 				LsnBlkInfo *elem = (LsnBlkInfo*)malloc(sizeof(LsnBlkInfo));
-				sprintf(elem->LSN, "%X/%08X", LSN_FORMAT_ARGS(lsn));
+				snprintf(elem->LSN, sizeof(elem->LSN), "%X/%08X", LSN_FORMAT_ARGS(lsn));
 				elem->blk = newblk;
 				ErrBlkNotFound(newblk,lsn);
 				parray_append(LsnBlkInfos,elem);
@@ -2802,7 +2811,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 				RelFileNode rnode;
 				ForkNumber	fork;
 				xl_heap_delete	*del_xlrec = NULL;
-				sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+				snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 				#if PG_VERSION_NUM > 14
 				(void) XLogRecGetBlockTagExtended(record, block_id,&rnode, &fork, &blk, NULL);
@@ -2855,7 +2864,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 			RelFileNode rnode;
 			ForkNumber	fork;
 
-			sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+			snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 			#if PG_VERSION_NUM > 14
 			(void) XLogRecGetBlockTagExtended(record, 0,&rnode, &fork, &blk, NULL);
@@ -2927,7 +2936,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 			#else
 			XLogRecGetBlockTag(record, block_id,&rnode, &fork, &blk);
 			#endif
-			sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+			snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 			#if LSNDSP == 1
 			// XLogRecGetTotalLen(record),
@@ -2987,7 +2996,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3011,7 +3020,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3046,7 +3055,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3197,7 +3206,7 @@ int XLogRecordRestoreFPWsforTOAST(pg_attributeDesc *allDesc,XLogReaderState *rec
 			#else
 			XLogRecGetBlockTag(record, block_id,&rnode, &fork, &blk);
 			#endif
-			sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+			snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 			#if LSNDSP == 1
 			// XLogRecGetTotalLen(record),
@@ -3257,7 +3266,7 @@ int XLogRecordRestoreFPWsforTOAST(pg_attributeDesc *allDesc,XLogReaderState *rec
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3281,7 +3290,7 @@ int XLogRecordRestoreFPWsforTOAST(pg_attributeDesc *allDesc,XLogReaderState *rec
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3316,7 +3325,7 @@ int XLogRecordRestoreFPWsforTOAST(pg_attributeDesc *allDesc,XLogReaderState *rec
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3356,15 +3365,17 @@ void xact_desc_pg_drop(TimestampTz *TimeFromRecord,Oid *datafileOid,Oid *toastOi
 			char *oid_pos =NULL;
 			int oidoff;
 			if( strcmp(sdcPgClass->xman,"NoWayOut") != 0 ){
-				xman = strdup(sdcPgClass->xman);
-				char *relkind = get_field('\t',xman,kindNum);
-				if(strcmp(xman,"NoWayOut") != 0 && strcmp(relkind,"r") == 0 ){
-					oid_pos = strchr(xman, '\t');
-					if(strncmp(oid_pos+1,"pg_toast",8) != 0){
-						oidoff = oid_pos - xman;
-						writable = 1;
-					}
+				xman = pdu_strdup(sdcPgClass->xman);
+				if (xman) {
+					char *relkind = get_field('\t',xman,kindNum);
+					if(strcmp(xman,"NoWayOut") != 0 && strcmp(relkind,"r") == 0 ){
+						oid_pos = strchr(xman, '\t');
+						if(strncmp(oid_pos+1,"pg_toast",8) != 0){
+							oidoff = oid_pos - xman;
+							writable = 1;
+						}
 
+					}
 				}
 			}
 			if(writable){
@@ -3375,7 +3386,7 @@ void xact_desc_pg_drop(TimestampTz *TimeFromRecord,Oid *datafileOid,Oid *toastOi
 				elem->oid = atoi(oidstr);
 				elem->filenode =  atoi(filenode);
 				elem->Tx = currentTx;
-				strcpy(elem->tabname,tabname);
+				snprintf(elem->tabname, sizeof(elem->tabname), "%s", tabname);
 				free(tabname);
 				free(oidstr);
 				free(filenode);
@@ -3394,11 +3405,13 @@ void xact_desc_pg_drop(TimestampTz *TimeFromRecord,Oid *datafileOid,Oid *toastOi
 			char *oid_pos =NULL;
 			int oidoff;
 			if(strcmp(sdcPgAttr->xman,"NoWayOut") != 0){
-				xman = strdup(sdcPgAttr->xman);
-				oid_pos = strchr(xman, '\t');
-				if(strcmp(xman,"NoWayOut") != 0 ){
-					oidoff = oid_pos - xman;
-					writable = 1;
+				xman = pdu_strdup(sdcPgAttr->xman);
+				if (xman) {
+					oid_pos = strchr(xman, '\t');
+					if(strcmp(xman,"NoWayOut") != 0 ){
+						oidoff = oid_pos - xman;
+						writable = 1;
+					}
 				}
 			}
 			if(writable){
@@ -3480,7 +3493,7 @@ int XLogRecordRedoDropFPW(systemDropContext *sdc,XLogReaderState *record)
 				XLogRecGetBlockTag(record, block_id,&rnode, &fork, &blk);
 				#endif
 				del_xlrec = (xl_heap_delete *) XLogRecGetData(record);
-				sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+				snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 				#if LSNDSP == 1
 				// 	XLogRecGetTotalLen(record),
@@ -3517,7 +3530,7 @@ int XLogRecordRedoDropFPW(systemDropContext *sdc,XLogReaderState *record)
 			#else
 			XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 			#endif
-			sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+			snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 			#if LSNDSP == 1
 			// XLogRecGetTotalLen(record),
@@ -3564,7 +3577,7 @@ int XLogRecordRedoDropFPW(systemDropContext *sdc,XLogReaderState *record)
 			#else
 			XLogRecGetBlockTag(record, block_id,&rnode, &fork, &blk);
 			#endif
-			sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+			snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 			#if LSNDSP == 1
 			// XLogRecGetTotalLen(record),
@@ -3609,7 +3622,7 @@ int XLogRecordRedoDropFPW(systemDropContext *sdc,XLogReaderState *record)
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3633,7 +3646,7 @@ int XLogRecordRedoDropFPW(systemDropContext *sdc,XLogReaderState *record)
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3660,7 +3673,7 @@ int XLogRecordRedoDropFPW(systemDropContext *sdc,XLogReaderState *record)
 		#else
 		XLogRecGetBlockTag(record, 0,&rnode, &fork, &blk);
 		#endif
-		sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+		snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 		#if LSNDSP == 1
 		// XLogRecGetTotalLen(record),
@@ -3694,7 +3707,7 @@ void XLogScanRecordForDisplay(XLogDumpConfig *config, XLogReaderState *record,pa
 	#else
 	XLogRecGetBlockTag(record, block_id,&rnode, &forknum, &blk);
 	#endif
-	sprintf(lsn,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
+	snprintf(lsn, sizeof(lsn), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 	#if LSNDSP == 1
 	// XLogRecGetTotalLen(record),
@@ -3706,7 +3719,7 @@ void XLogScanRecordForDisplay(XLogDumpConfig *config, XLogReaderState *record,pa
 	#endif
 
 	char LSN[50];
-	sprintf(LSN,"%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr),LSN_FORMAT_ARGS(xl_prev));
+	snprintf(LSN, sizeof(LSN), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr),LSN_FORMAT_ARGS(xl_prev));
 
 	TransactionId tx = XLogRecGetXid(record);
 
@@ -3742,15 +3755,15 @@ void XLogScanRecordForDisplay(XLogDumpConfig *config, XLogReaderState *record,pa
 				}
 				else{
 					DELstruct *elem = (DELstruct*)malloc(sizeof(DELstruct));
-					strcpy(elem->startLSN,LSN);
-					strcpy(elem->startLSNforTOAST,LSN);
-					strcpy(elem->startwal,currWalName);
+					snprintf(elem->startLSN, sizeof(elem->startLSN), "%s", LSN);
+					snprintf(elem->startLSNforTOAST, sizeof(elem->startLSNforTOAST), "%s", LSN);
+					snprintf(elem->startwal, sizeof(elem->startwal), "%s", currWalName);
 					elem->tx=tx;
 					elem->delCount=1;
 					if(strcmp(elemforTime->startLSN,"") == 0){
-						strcpy(elemforTime->startLSN,elem->startLSN);
-						strcpy(elemforTime->startLSNforTOAST,elem->startLSNforTOAST);
-						strcpy(elemforTime->startwal,elem->startwal);
+						snprintf(elemforTime->startLSN, sizeof(elemforTime->startLSN), "%s", elem->startLSN);
+						snprintf(elemforTime->startLSNforTOAST, sizeof(elemforTime->startLSNforTOAST), "%s", elem->startLSNforTOAST);
+						snprintf(elemforTime->startwal, sizeof(elemforTime->startwal), "%s", elem->startwal);
 					}
 					harray_append(delElems,HARRAYDEL,elem,tx);
 				}
@@ -3760,14 +3773,14 @@ void XLogScanRecordForDisplay(XLogDumpConfig *config, XLogReaderState *record,pa
 				if(txFound){
 					parray_append(Txs,(void *)(intptr_t)tx);
 					DELstruct *elem = harray_get(delElems,HARRAYDEL,tx);
-					strcpy(elem->endLSN,LSN);
-					strcpy(elem->endLSNforTOAST,LSN);
-					strcpy(elem->endwal,currWalName);
+					snprintf(elem->endLSN, sizeof(elem->endLSN), "%s", LSN);
+					snprintf(elem->endLSNforTOAST, sizeof(elem->endLSNforTOAST), "%s", LSN);
+					snprintf(elem->endwal, sizeof(elem->endwal), "%s", currWalName);
 					elem->txtime = *TimeFromRecord;
 
-					strcpy(elemforTime->endLSN,elem->endLSN);
-					strcpy(elemforTime->endLSNforTOAST,elem->endLSNforTOAST);
-					strcpy(elemforTime->endwal,elem->endwal);
+					snprintf(elemforTime->endLSN, sizeof(elemforTime->endLSN), "%s", elem->endLSN);
+					snprintf(elemforTime->endLSNforTOAST, sizeof(elemforTime->endLSNforTOAST), "%s", elem->endLSNforTOAST);
+					snprintf(elemforTime->endwal, sizeof(elemforTime->endwal), "%s", elem->endwal);
 					elemforTime->txtime = elem->txtime;
 					elemforTime->delCount+=elem->delCount;
 				}
@@ -5184,18 +5197,18 @@ parray *pgGetTxforArch(parray **TxTime_parray_ptr,
 		memset(FPWSegmentPath,0,100);
 		if(strcmp(datafile,"0") == 0 && strcmp(oldDatafile,"0") == 0){
 			isToastRound = 1;
-			strcpy(FPWSegmentPath,"restore/datafile");
+			snprintf(FPWSegmentPath, sizeof(FPWSegmentPath), "%s", "restore/datafile");
 		}
 		else{
 			isToastRound = 0;
-			strcpy(FPWSegmentPath,"restore/.fpw");
+			snprintf(FPWSegmentPath, sizeof(FPWSegmentPath), "%s", "restore/.fpw");
 		}
 	}
 	else{
 		sdcPgClass = initSystemDropContext("pg_class");
 		sdcPgAttr = initSystemDropContext("pg_attribute");
 		isToastRound = 0;
-		strcpy(FPWSegmentPath,"restore/.fpw");
+		snprintf(FPWSegmentPath, sizeof(FPWSegmentPath), "%s", "restore/.fpw");
 	}
 
 	FPIcount = 0;
@@ -5209,19 +5222,17 @@ parray *pgGetTxforArch(parray **TxTime_parray_ptr,
 	memset(suffix,0,10);
 	memset(filetyp,0,10);
 	if(ExportMode_there == CSVform && resTyp_there == DELETEtyp)
-		strcpy(suffix,".csv");
-	else if((ExportMode_there == SQLform && resTyp_there == DELETEtyp) || resTyp_there == UPDATEtyp)
-		strcpy(suffix,".sql");
-
+		snprintf(suffix, 10240,  "%s", ".csv");	else if((ExportMode_there == SQLform && resTyp_there == DELETEtyp) || resTyp_there == UPDATEtyp)
+		snprintf(suffix, 10240,  "%s", ".sql");
 	if(resTyp_there == DELETEtyp)
-		strcpy(filetyp,"del");
+		snprintf(filetyp, sizeof(filetyp), "%s", "del");
 	else if(resTyp_there == UPDATEtyp)
-		strcpy(filetyp,"upd");
+		snprintf(filetyp, sizeof(filetyp), "%s", "upd");
 
 	FILE *bootFile;
 	if(flag == DELRESTORE && restoreMode_there == TxRestore && isToastRound == 0){
 		DELstruct *elem = parray_get(Tx_parray,0);
-		sprintf(bootfilename,"restore/public/%s_%d%s",tabname,elem->tx,suffix);
+		snprintf(bootfilename, sizeof(bootfilename), "restore/public/%s_%d%s",tabname,elem->tx,suffix);
 		bootFile = fopen(bootfilename,"w");
         #ifdef CN
         char *item="▌ 事务号恢复模式";
@@ -5233,7 +5244,7 @@ parray *pgGetTxforArch(parray **TxTime_parray_ptr,
 	else if(flag == DELRESTORE && restoreMode_there == periodRestore && isToastRound == 0){
 		char *srttimeStr=(char *)timestamptz_to_str(*SrtTime);
 		char *endtimeStr=(char *)timestamptz_to_str(*EndTime);
-		sprintf(bootfilename,"restore/public/%s_%s_%s_%s%s",tabname,filetyp,srttimeStr,endtimeStr,suffix);
+		snprintf(bootfilename, sizeof(bootfilename), "restore/public/%s_%s_%s_%s%s",tabname,filetyp,srttimeStr,endtimeStr,suffix);
 		bootFile = fopen(bootfilename,"w");
         #ifdef CN
         char *item="▌ 时间区间恢复模式";
@@ -5249,10 +5260,10 @@ parray *pgGetTxforArch(parray **TxTime_parray_ptr,
 	memset(targetToastfile,0,50);
 	memset(targetOldToastfile,0,50);
 
-	strcpy(targetDatafile,datafile);
-	strcpy(targetOldDatafile,oldDatafile);
-	strcpy(targetToastfile,toastfile);
-	strcpy(targetOldToastfile,oldToastfile);
+	snprintf(targetDatafile, sizeof(targetDatafile), "%s", datafile);
+	snprintf(targetOldDatafile, sizeof(targetOldDatafile), "%s", oldDatafile);
+	snprintf(targetToastfile, sizeof(targetToastfile), "%s", toastfile);
+	snprintf(targetOldToastfile, sizeof(targetOldToastfile), "%s", oldToastfile);
 
 	delOrDrop = flag;
     earliestTimeLocal_pg = NULL;

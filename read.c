@@ -257,27 +257,32 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
     int datafileExist = 0;
     char result[MAXPGPATH];
 
-    FILE *logSucc=fopen(logPathSucc,"a");
-    FILE *logErr=fopen(logPathErr,"a");
+    FILE *logSucc=pdu_fopen(logPathSucc,"a");
+    FILE *logErr=pdu_fopen(logPathErr,"a");
 
     if(strcmp(BOOTTYPE,TABLE_BOOTTYPE) == 0){
         int nAttr = atoi(taboid->nattr);
-        allDesc = (pg_attributeDesc*)malloc(nAttr*sizeof(pg_attributeDesc));
+        allDesc = (pg_attributeDesc*)pdu_malloc(nAttr*sizeof(pg_attributeDesc));
+        if (allDesc == NULL) return FAILURE_RET;
         dropExist1 = getPgAttrDesc(taboid,allDesc);
     }
 
     int hundred;
     for(hundred=0;hundred<NUM1G;hundred++){
         if ( hundred == 0 ){
-            sprintf(filenameFINNAL,"%s",filename);
+            snprintf(filenameFINNAL, sizeof(filenameFINNAL), "%s",filename);
         }
         else{
-            sprintf(filenameFINNAL,"%s.%d",filename,hundred);
+            snprintf(filenameFINNAL, sizeof(filenameFINNAL), "%s.%d",filename,hundred);
         }
         if (access(filenameFINNAL, F_OK) != -1) {
             keepDumping = 1;
             FILE *fp;
-            fp = fopen(filenameFINNAL, "rb");
+            fp = pdu_fopen(filenameFINNAL, "rb");
+            if (fp == NULL) {
+                fprintf(stderr, "Failed to open file: %s\n", filenameFINNAL);
+                return FAILURE_RET;
+            }
 
             #if DROPDEBUG == 1
             int fd = open(filenameFINNAL, O_RDONLY);
@@ -305,10 +310,10 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
             {
                 char err1[2048];
                 #ifdef EN
-                sprintf(err1,"\nFAIL TO OPEN TABLE <%s> DATAFILE <%s> ,PLEASE CHECKOUT DATAFILE\n",
+                snprintf(err1,sizeof(err1),"\nFAIL TO OPEN TABLE <%s> DATAFILE <%s> ,PLEASE CHECKOUT DATAFILE\n",
                     bootFileName,filenameFINNAL);
                 #else
-                sprintf(err1,"\n无法打开表 <%s> 的数据文件 <%s> ,请检查数据文件是否存在\n",
+                snprintf(err1,sizeof(err1),"\n无法打开表 <%s> 的数据文件 <%s> ,请检查数据文件是否存在\n",
                     bootFileName,filenameFINNAL);
                 #endif
                 fputs(err1,logErr);
@@ -318,23 +323,20 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
             pageSize = BLCKSZ;
 
             BlockNumber	currentBlockNo = 0;
-            char *block = (char *)malloc(pageSize);
-            memset(block,0,pageSize);
-
+            char *block = (char *)pdu_calloc(1, pageSize);
             if (!block)
             {
                 printf("\nFAILED TO ALLOCATE SIZE OF <%d> BYTES\n",
                     pageSize);
+                return FAILURE_RET;
             }
 
             resetArray2Process(attr2Process);
 
             memset(result,0,MAXPGPATH);
             if(exmode == CSVform)
-                sprintf(result,"%s/%s/%s%s",CUR_DB,CUR_SCH,bootFileName,".csv");
-            else if(exmode == SQLform)
-                sprintf(result,"%s/%s/%s%s",CUR_DB,CUR_SCH,bootFileName,".sql");
-            if (strcmp(BOOTTYPE,TABLE_BOOTTYPE) == 0){
+                snprintf(result, 1024,  "%s/%s/%s%s",CUR_DB,CUR_SCH,bootFileName,".csv");            else if(exmode == SQLform)
+                snprintf(result, 1024,  "%s/%s/%s%s",CUR_DB,CUR_SCH,bootFileName,".sql");            if (strcmp(BOOTTYPE,TABLE_BOOTTYPE) == 0){
                 if (hundred >0){
                     bootFile = fopen(result, "a");
                 }
@@ -348,15 +350,17 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
             if (!bootFile)
             {
                 char err1[1050];
-                sprintf(err1,"\nFailed to open target csv file <%s>, please check\n",
+                snprintf(err1,sizeof(err1),"\nFailed to open target csv file <%s>, please check\n",
                     result);
                 printf("%s",err1);
                 fputs(err1,logErr);
                 dropExist1=0;
                 return FAILURE_RET;
             }
-            char *attr2DecodeTMP = (char *)malloc((strlen(attr2Decode)+1)*sizeof(char));
-            strcpy(attr2DecodeTMP,attr2Decode);
+            size_t attr2Decode_len = strlen(attr2Decode)+1;
+            char *attr2DecodeTMP = (char *)pdu_malloc(attr2Decode_len);
+            if (attr2DecodeTMP == NULL) return FAILURE_RET;
+            snprintf(attr2DecodeTMP, attr2Decode_len, "%s", attr2Decode);
             int nAttr=0;
 
             char *attrChars[MAX_COL_NUM];
@@ -530,7 +534,7 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
                     FILE *a = fopen("unloaddropscan.txt","a");
                     char content[1000] = {0};
                     printf("Offset:%-10lld data page:%d records count:%d total records:%d byte offset from last page:%-10lld\n",currOffset,nPages,maxOffset,nItemsSucc,currOffset-lastMatchedOffset);
-                    sprintf(content,"Offset:%-10lld data page:%d records count:%d total records:%d byte offset from last page:%-10lld\n",currOffset,nPages,maxOffset,nItemsSucc,currOffset-lastMatchedOffset);
+                    snprintf(content, sizeof(content), "Offset:%-10lld data page:%d records count:%d total records:%d byte offset from last page:%-10lld\n",currOffset,nPages,maxOffset,nItemsSucc,currOffset-lastMatchedOffset);
                     lastMatchedOffset=currOffset;
                     fputs(content,a);
                     fclose(a);
@@ -544,10 +548,10 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
                 int nTotal=nItemsErr+nItemsSucc;
                 char succ1[1050];
                 #ifdef EN
-                sprintf(succ1,"<%s>-<%s> Completed\n\t|-%d Pages , %d Records Decoded IN TOTAL.SUCCESS: %d ;FAILED: %d\n\t|-File Path: %s\n",
+                snprintf(succ1,sizeof(succ1),"<%s>-<%s> Completed\n\t|-%d Pages , %d Records Decoded IN TOTAL.SUCCESS: %d ;FAILED: %d\n\t|-File Path: %s\n",
                                 bootFileName,filenameFINNAL,nPages,nTotal,nItemsSucc,nItemsErr,result);
                 #else
-                sprintf(succ1,"\n\t|-表 %s(%s) 解析完成\n\t|-%d 个数据页 ,共计 %d 条数据. 成功 %d 条; 失败 %d 条\n\t|-文件路径: %s\n\n",
+                snprintf(succ1,sizeof(succ1),"\n\t|-表 %s(%s) 解析完成\n\t|-%d 个数据页 ,共计 %d 条数据. 成功 %d 条; 失败 %d 条\n\t|-文件路径: %s\n\n",
                     bootFileName,filenameFINNAL,nPages,nTotal,nItemsSucc,nItemsErr,result);
                 #endif
                 infoUnlodResult(bootFileName,filenameFINNAL,nPages,nTotal,nItemsSucc,nItemsErr,result);
@@ -611,7 +615,7 @@ void execCmd(int USR_CMD,char *former,char *latter,char *third,char *fourth)
     if (USR_CMD == CMD_BOOTSTRAP){
         setRestypeNoShow("delete");
 
-        sprintf(pgDatabaseFile,"%s%s",initDBPath,pgDatabaseFilenode);
+        snprintf(pgDatabaseFile, sizeof(pgDatabaseFile), "%s%s",initDBPath,pgDatabaseFilenode);
         FILE *dbExist = fopen(pgDatabaseFile,"r");
         if(dbExist){
             fclose(dbExist);
@@ -620,9 +624,7 @@ void execCmd(int USR_CMD,char *former,char *latter,char *third,char *fourth)
         else{
             bootstrap_abnormal();
         }
-        strcpy(CUR_DB,"PDU");
-        strcpy(CUR_SCH,"public");
-        return;
+        snprintf(CUR_DB, 100,  "%s", "PDU");        snprintf(CUR_SCH, 100,  "%s", "public");        return;
     }
 
     if( USR_CMD == CMD_DROPSCAN){
@@ -729,10 +731,10 @@ DBstruct* bootDBStruct(char *filename,int isCompleted)
         return NULL;
     }
 
-    DBstruct *databaseoid = (DBstruct *)malloc(numLines * sizeof(DBstruct));
+    DBstruct *databaseoid = (DBstruct *)pdu_malloc(numLines * sizeof(DBstruct));
     if (databaseoid == NULL) {
         perror("Memory allocation failed");
-        exit(1);
+        return NULL;
     }
     if ( ! isCompleted ){
         int i;
@@ -815,10 +817,10 @@ TABstruct* bootTabStruct(char *filename,int isCompleted){
     if(file == NULL)
         return NULL;
 
-    TABstruct *taboid = (TABstruct *)malloc(numLines * sizeof(TABstruct));
+    TABstruct *taboid = (TABstruct *)pdu_malloc(numLines * sizeof(TABstruct));
     if (taboid == NULL) {
         perror("Memory allocation failed");
-        exit(1);
+        return NULL;
     }
 
     if ( ! isCompleted ){
@@ -828,12 +830,13 @@ TABstruct* bootTabStruct(char *filename,int isCompleted){
             if(toastTaboid_harray != NULL){
                 if(strncmp(taboid[i].tab,"pg_toast_",9) == 0){
                     uint32 toastindex = atoi(taboid[i].oid);
-                    TABstruct *ontaboid = (TABstruct*)malloc(sizeof(TABstruct));
-                    strcpy(ontaboid->oid,taboid[i].oid);
-                    strcpy(ontaboid->filenode,taboid[i].filenode);
-                    strcpy(ontaboid->nsp,taboid[i].nsp);
-                    strcpy(ontaboid->tab,taboid[i].tab);
-                    strcpy(ontaboid->nattr,taboid[i].nattr);
+                    TABstruct *ontaboid = (TABstruct*)pdu_malloc(sizeof(TABstruct));
+                    if (ontaboid == NULL) continue;
+                    snprintf(ontaboid->oid, sizeof(ontaboid->oid), "%s", taboid[i].oid);
+                    snprintf(ontaboid->filenode, sizeof(ontaboid->filenode), "%s", taboid[i].filenode);
+                    snprintf(ontaboid->nsp, sizeof(ontaboid->nsp), "%s", taboid[i].nsp);
+                    snprintf(ontaboid->tab, sizeof(ontaboid->tab), "%s", taboid[i].tab);
+                    snprintf(ontaboid->nattr, sizeof(ontaboid->nattr), "%s", taboid[i].nattr);
                     harray_append(toastTaboid_harray,HARRAYTAB,ontaboid,toastindex);
                 }
             }
@@ -871,10 +874,10 @@ SCHstruct* bootSCHStruct(char *filename){
         ErrorFileNotExist(filename);
         return NULL;
     }
-    SCHstruct *schoid = (SCHstruct *)malloc(numLines * sizeof(SCHstruct));
+    SCHstruct *schoid = (SCHstruct *)pdu_malloc(numLines * sizeof(SCHstruct));
     if (schoid == NULL) {
         perror("Memory allocation failed");
-        exit(1);
+        return NULL;
     }
     int i;
     for (i = 0; i < numLines; i++) {
@@ -900,10 +903,10 @@ SCHstruct* bootSCHStruct(char *filename){
 TYPstruct* bootTYPStruct(char *filename){
     int numLines = 0;
     FILE *file = fileGetLines(filename,&numLines);
-    TYPstruct *typoid = (TYPstruct *)malloc(numLines * sizeof(TYPstruct));
+    TYPstruct *typoid = (TYPstruct *)pdu_malloc(numLines * sizeof(TYPstruct));
     if (typoid == NULL) {
         perror("Memory allocation failed");
-        exit(1);
+        return NULL;
     }
     int i;
     for (i = 0; i < numLines; i++) {
@@ -925,14 +928,17 @@ TYPstruct* bootTYPStruct(char *filename){
  */
 void bootforDropScan(char *CUR_DB)
 {
-    char *DBClassFile = malloc(100);
-    char *DBAttrFile = malloc(100);
-    char *DBTypFile = malloc(100);
+    char *DBClassFile = pdu_malloc(100);
+    char *DBAttrFile = pdu_malloc(100);
+    char *DBTypFile = pdu_malloc(100);
+    if (DBClassFile == NULL || DBAttrFile == NULL || DBTypFile == NULL) {
+        free(DBClassFile);
+        free(DBAttrFile);
+        free(DBTypFile);
+        return;
+    }
     char *prefix = "restore/meta";
-    sprintf(DBClassFile, "%s/%s", prefix, CLASS_BOOT);
-    sprintf(DBAttrFile, "%s/%s", prefix, ATTR_BOOT);
-    sprintf(DBTypFile, "%s/meta/%s", CUR_DB, TYP_BOOT);
-    int tabSize=getLineNum(DBClassFile);
+    snprintf(DBClassFile, 100, "%s/%s", prefix, CLASS_BOOT);    snprintf(DBAttrFile, 100, "%s/%s", prefix, ATTR_BOOT);    snprintf(DBTypFile, 100, "%s/meta/%s", CUR_DB, TYP_BOOT);    int tabSize=getLineNum(DBClassFile);
     TABstruct *taboidDrop;
     taboidDrop=bootTabStruct(DBClassFile,0);
 
@@ -949,8 +955,8 @@ void bootforDropScan(char *CUR_DB)
     free(typoid);
     harray_free(attr_harray);
     char filename[100];
-    sprintf(filename, "%s/%s/%s_%s", "restore","meta","public",TABLE_BOOT);
-    FILE *fp = fopen(filename,"w");
+    snprintf(filename, 256,  "%s/%s/%s_%s", "restore","meta","public",TABLE_BOOT);    FILE *fp = pdu_fopen(filename,"w");
+    if (fp == NULL) return;
 
     int i;
 
@@ -958,14 +964,15 @@ void bootforDropScan(char *CUR_DB)
         char *tmpstr=NULL;
 
         if ( strlen(taboidDrop[i].attr) > 0 ){
-            tmpstr = (char *)malloc( (sizeof(char))*(sizeof( taboidDrop[i].oid)+sizeof(taboidDrop[i].filenode)+
+            tmpstr = (char *)pdu_malloc( (sizeof(char))*(sizeof( taboidDrop[i].oid)+sizeof(taboidDrop[i].filenode)+
                         sizeof(taboidDrop[i].nsp)+sizeof(taboidDrop[i].tab)+
                         sizeof(taboidDrop[i].attr)+sizeof(taboidDrop[i].typ)+sizeof(taboidDrop[i].toastoid)));
+            if (tmpstr == NULL) continue;
             if(strlen(taboidDrop[i].typ) == 0 && strlen(taboidDrop[i].attmod) == 0){
-                strcpy(taboidDrop[i].typ,"NotFound");
-                strcpy(taboidDrop[i].attmod,"NotFound");
+                snprintf(taboidDrop[i].typ, sizeof(taboidDrop[i].typ), "%s", "NotFound");
+                snprintf(taboidDrop[i].attmod, sizeof(taboidDrop[i].attmod), "%s", "NotFound");
             }
-            sprintf(tmpstr, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+            snprintf(tmpstr, 30000, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
                                                                 taboidDrop[i].oid,taboidDrop[i].filenode,
                                                                 taboidDrop[i].toastoid,taboidDrop[i].toastoid,
                                                                 taboidDrop[i].nsp, taboidDrop[i].tab,
@@ -1017,10 +1024,10 @@ void toastBootstrap(char *toastmeta,char *toastnode)
     unlink(metatoastFilename);
     for(int hundred=0;hundred<NUM1G;hundred++){
         if ( hundred == 0 ){
-            sprintf(taostFilenameFINNAL,"%s/%s",CUR_DBDIR,toastnode);
+            snprintf(taostFilenameFINNAL, sizeof(taostFilenameFINNAL), "%s/%s",CUR_DBDIR,toastnode);
         }
         else{
-            sprintf(taostFilenameFINNAL,"%s/%s.%d",CUR_DBDIR,toastnode,hundred);
+            snprintf(taostFilenameFINNAL, sizeof(taostFilenameFINNAL), "%s/%s.%d",CUR_DBDIR,toastnode,hundred);
         }
         if (access(taostFilenameFINNAL, F_OK) != -1) {
             FILE *toastRelFp = fopen(taostFilenameFINNAL, "rb");
@@ -1093,21 +1100,23 @@ int readFromFilenodeOClass(char *nodefileType,char *filename,char *readType)
 
         num_loops = map->num_mappings;
         char *mapfilenodeStr = NULL;
-        mapfilenodeStr = (char *)malloc(buffer_size);
+        mapfilenodeStr = (char *)pdu_malloc(buffer_size);
+        if (mapfilenodeStr == NULL) return FAILURE_RET;
 
         char *mapfilenodeStr1 = NULL;
-        mapfilenodeStr1 = (char *)malloc(buffer_size);
+        mapfilenodeStr1 = (char *)pdu_malloc(buffer_size);
+        if (mapfilenodeStr1 == NULL) { free(mapfilenodeStr); return FAILURE_RET; }
 
         char *mapfilenodeStr2 = NULL;
-        mapfilenodeStr2 = (char *)malloc(buffer_size);
+        mapfilenodeStr2 = (char *)pdu_malloc(buffer_size);
+        if (mapfilenodeStr2 == NULL) { free(mapfilenodeStr); free(mapfilenodeStr1); return FAILURE_RET; }
 
         for (int i=0; i < num_loops; i++) {
             m = mappings[i];
 
             if( strcmp(nodefileType,"g") ==0 ){
                 if ( m.mapoid == 1262){
-                    sprintf(mapfilenodeStr, "%s%s%d",initDBPath,"global/",m.mapfilenode);
-                    pgDatabaseFilex = mapfilenodeStr;
+                    snprintf(mapfilenodeStr, 200,  "%s%s%d",initDBPath,"global/",m.mapfilenode);                    pgDatabaseFilex = mapfilenodeStr;
                     return 1;
                 }
             }
@@ -1115,20 +1124,17 @@ int readFromFilenodeOClass(char *nodefileType,char *filename,char *readType)
             else if (strcmp(nodefileType,"b") ==0)
             {
                 if ( m.mapoid == 1259){
-                    sprintf(mapfilenodeStr, "%s/%d",CUR_DBDIR,m.mapfilenode);
-                    pgClassFilex = mapfilenodeStr;
-                    pgClassFilenode = (char*)malloc(sizeof(char)*20);
-                    sprintf(pgClassFilenode,"%d",m.mapfilenode);
+                    snprintf(mapfilenodeStr, 200,  "%s/%d",CUR_DBDIR,m.mapfilenode);                    pgClassFilex = mapfilenodeStr;
+                    pgClassFilenode = (char*)pdu_malloc(20);
+                    if (pgClassFilenode) snprintf(pgClassFilenode, 20, "%d",m.mapfilenode);
                 }
                 else if ( m.mapoid == 1249){
-                    sprintf(mapfilenodeStr1, "%s/%d",CUR_DBDIR,m.mapfilenode);
-                    pgAttrFilex= mapfilenodeStr1;
-                    pgAttrFilenode = (char*)malloc(sizeof(char)*20);
-                    sprintf(pgAttrFilenode,"%d",m.mapfilenode);
+                    snprintf(mapfilenodeStr1, 200,  "%s/%d",CUR_DBDIR,m.mapfilenode);                    pgAttrFilex= mapfilenodeStr1;
+                    pgAttrFilenode = (char*)pdu_malloc(20);
+                    if (pgAttrFilenode) snprintf(pgAttrFilenode, 20, "%d",m.mapfilenode);
                 }
                 else if ( m.mapoid == 1247){
-                    sprintf(mapfilenodeStr2, "%s/%d",CUR_DBDIR,m.mapfilenode);
-                    pgTypeFilex = mapfilenodeStr2;
+                    snprintf(mapfilenodeStr2, 200,  "%s/%d",CUR_DBDIR,m.mapfilenode);                    pgTypeFilex = mapfilenodeStr2;
                 }
 
             }
@@ -1138,9 +1144,9 @@ int readFromFilenodeOClass(char *nodefileType,char *filename,char *readType)
     else if( strcmp(readType,"pg_schema") ==0 ){
 
         char logPathSucc[100];
-        sprintf(logPathSucc,"log/boot_%s",CLASS_BOOTTYPE);
+        snprintf(logPathSucc, sizeof(logPathSucc), "log/boot_%s",CLASS_BOOTTYPE);
         char logPathErr[100];
-        sprintf(logPathErr,"log/boot_%s",CLASS_BOOTTYPE);
+        snprintf(logPathErr, sizeof(logPathErr), "log/boot_%s",CLASS_BOOTTYPE);
 
         readItems(NULL,pgClassFilex,CLASS_ATTR,CLASS_BOOT,CLASS_BOOTTYPE,logPathSucc,logPathErr);
 
@@ -1188,8 +1194,7 @@ void getSCHFromCLasstxt(char *filename){
     for (i = 0; i < numLines; i++) {
         if (fscanf(file, "%s %s %s %s %s %s", a, b, c, d, e, f) == 6) {
             if(strcmp(b,"pg_namespace") == 0){
-                sprintf(mapfilenodeStr3,"%s/%s",CUR_DBDIR,d);
-                pgSchemaFilex = mapfilenodeStr3;
+                snprintf(mapfilenodeStr3, 200,  "%s/%s",CUR_DBDIR,d);                pgSchemaFilex = mapfilenodeStr3;
                 break;
             };
         }
@@ -1212,16 +1217,15 @@ void bootstrap_abnormal(){
     char *fileType="g";
     char *globalFilenodePath=NULL;
     globalFilenodePath = (char *)malloc(buffer_size);
-    sprintf(globalFilenodePath, "%s%s", initDBPath, "global/pg_filenode.map");
-    if(!readFromFilenodeOClass(fileType,globalFilenodePath,"pg_database")){
+    snprintf(globalFilenodePath, 200,  "%s%s", initDBPath, "global/pg_filenode.map");    if(!readFromFilenodeOClass(fileType,globalFilenodePath,"pg_database")){
         printf("\n<%s>initialization failed，please check the reason  \n",globalFilenodePath);
     }
 
     infoBootstrap(1,pgDatabaseFilex,"","","",0,"",0,"",0);
     char logPathSucc[100];
-    sprintf(logPathSucc,"log/boot_%s",DB_BOOTTYPE);
+    snprintf(logPathSucc, sizeof(logPathSucc), "log/boot_%s",DB_BOOTTYPE);
     char logPathErr[100];
-    sprintf(logPathErr,"log/boot_%s",DB_BOOTTYPE);
+    snprintf(logPathErr, sizeof(logPathErr), "log/boot_%s",DB_BOOTTYPE);
 
     setlogLevel(readItemLog);
     readItems(NULL,pgDatabaseFilex,DB_ATTR,DB_BOOT,DB_BOOTTYPE,logPathSucc,logPathErr);
@@ -1249,8 +1253,7 @@ void bootstrap_abnormal(){
              (strcmp(databaseoid[i].database,"restore") != 0) &&
              (strcmp(databaseoid[i].database,"security") != 0)){
             CUR_DBDIR=databaseoid[i].dbpath;
-            strcpy(CUR_DB,databaseoid[i].database);
-            infoBootstrap(2,"",CUR_DB,"","",0,"",0,"",0);
+            snprintf(CUR_DB, 100,  "%s", databaseoid[i].database);            infoBootstrap(2,"",CUR_DB,"","",0,"",0,"",0);
 
             removeDir(CUR_DB);
             createDir(CUR_DB);
@@ -1262,22 +1265,21 @@ void bootstrap_abnormal(){
             char DBSchemaFile[MiddleAllocSize]="";
 
             char meta[100]="";
-            sprintf(meta,"%s/%s",CUR_DB,"meta");
+            snprintf(meta, sizeof(meta), "%s/%s",CUR_DB,"meta");
             createDir(meta);
 
             char toastmeta[100]="";
-            sprintf(toastmeta,"%s/%s",CUR_DB,"toastmeta");
+            snprintf(toastmeta, sizeof(toastmeta), "%s/%s",CUR_DB,"toastmeta");
             createDir(toastmeta);
 
             char manual[100]="";
-            sprintf(manual,"%s/%s",CUR_DB,"manual");
+            snprintf(manual, sizeof(manual), "%s/%s",CUR_DB,"manual");
             createDir(manual);
 
             fileType="b";
             char *baseFilenodePath=NULL;
             baseFilenodePath = (char *)malloc(buffer_size);
-            sprintf(baseFilenodePath,"%s/pg_filenode.map",CUR_DBDIR);
-            if(!readFromFilenodeOClass(fileType,baseFilenodePath,"pg_class")){
+            snprintf(baseFilenodePath, 200,  "%s/pg_filenode.map",CUR_DBDIR);            if(!readFromFilenodeOClass(fileType,baseFilenodePath,"pg_class")){
                 ("\n<%s>initialization failed，please check the reason  \n",baseFilenodePath);
                 exit(1);
             }
@@ -1295,11 +1297,11 @@ void bootstrap_abnormal(){
                 exit(1);
             }
 
-            sprintf(TmpDBClassFile, "%s/%s", meta, CLASS_BOOT_FINAL);
-            sprintf(DBClassFile, "%s/%s", meta, CLASS_BOOT);
-            sprintf(DBAttrFile, "%s/%s", meta, ATTR_BOOT);
-            sprintf(DBTypFile, "%s/%s", meta, TYP_BOOT);
-            sprintf(DBSchemaFile, "%s/%s", meta, SCHEMA_BOOT);
+            snprintf(TmpDBClassFile, sizeof(TmpDBClassFile), "%s/%s", meta, CLASS_BOOT_FINAL);
+            snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s", meta, CLASS_BOOT);
+            snprintf(DBAttrFile, sizeof(DBAttrFile), "%s/%s", meta, ATTR_BOOT);
+            snprintf(DBTypFile, sizeof(DBTypFile), "%s/%s", meta, TYP_BOOT);
+            snprintf(DBSchemaFile, sizeof(DBSchemaFile), "%s/%s", meta, SCHEMA_BOOT);
 
             printf("\t%s%s\n\t%s\n\t%s\n\t%s%s\n",COLOR_UNLOAD,pgSchemaFilex,pgClassFilex,pgTypeFilex,pgAttrFilex,C_RESET);
             bootMetaInfo2File(pgSchemaFilex,pgClassFilex,pgTypeFilex,pgAttrFilex);
@@ -1330,15 +1332,16 @@ void bootstrap_abnormal(){
 
             for ( i1 = 0 ; i1 < schemalen ; i1++){
                 char *schoid = schoidTMP[i1].oid;
-                strcpy(CUR_SCH,schoidTMP[i1].nspname);
-                if(schemaInDefaultSHCS(CUR_SCH)){
+                snprintf(CUR_SCH, 100,  "%s", schoidTMP[i1].nspname);                if(schemaInDefaultSHCS(CUR_SCH)){
                     continue;
                 }
 
                 char getSchNumCMD[100];
-                sprintf(getSchNumCMD,"cat %s |grep %s|wc -l",DBClassFile,schoid);
+                snprintf(getSchNumCMD, sizeof(getSchNumCMD), "cat %s |grep %s|wc -l",DBClassFile,schoid);
                 char *schtabObj = execCMD(getSchNumCMD);
                 int schtabObjNum = atoi(schtabObj)+20;
+                free(schtabObj);
+                schtabObj=NULL;
                 TABstruct *schtaboid = (TABstruct *)malloc(schtabObjNum * sizeof(TABstruct));
                 if (schtaboid == NULL) {
                     perror("Failed to allocate memory，need to reduceMAX_TAB_OBJvalue");
@@ -1357,10 +1360,10 @@ void bootstrap_abnormal(){
                             #endif
                             exit(1);
                         }
-                        strcpy(schtaboid[k1].oid,taboidTMP[j1].oid);
-                        strcpy(schtaboid[k1].tab,taboidTMP[j1].tab);
-                        strcpy(schtaboid[k1].nsp,taboidTMP[j1].nsp);
-                        strcpy(schtaboid[k1].filenode,taboidTMP[j1].filenode);
+                        snprintf(schtaboid[k1].oid, sizeof(schtaboid[k1].oid), "%s", taboidTMP[j1].oid);
+                        snprintf(schtaboid[k1].tab, sizeof(schtaboid[k1].tab), "%s", taboidTMP[j1].tab);
+                        snprintf(schtaboid[k1].nsp, sizeof(schtaboid[k1].nsp), "%s", taboidTMP[j1].nsp);
+                        snprintf(schtaboid[k1].filenode, sizeof(schtaboid[k1].filenode), "%s", taboidTMP[j1].filenode);
 
                         if(strcmp(taboidTMP[j1].toastoid,"0") != 0){
                             unsigned int toast2searchIndex = hash(toastTaboid_harray,taboidTMP[j1].toastoid,toastTaboid_harray->allocated);
@@ -1368,27 +1371,27 @@ void bootstrap_abnormal(){
                             while (node != NULL) {
                                 TABstruct* onatoastoid = (TABstruct*)node->data;
                                 if(strcmp(onatoastoid->oid,taboidTMP[j1].toastoid) == 0){
-                                    strcpy(schtaboid[k1].toastnode,onatoastoid->filenode);
-                                    strcpy(schtaboid[k1].toastoid,onatoastoid->oid);
+                                    snprintf(schtaboid[k1].toastnode, sizeof(schtaboid[k1].toastnode), "%s", onatoastoid->filenode);
+                                    snprintf(schtaboid[k1].toastoid, sizeof(schtaboid[k1].toastoid), "%s", onatoastoid->oid);
                                 }
                                 node = node->next;
                             }
                         }
                         else{
-                            strcpy(schtaboid[k1].toastnode,taboidTMP[j1].toastoid);
-                            strcpy(schtaboid[k1].toastoid,taboidTMP[j1].toastoid);
+                            snprintf(schtaboid[k1].toastnode, sizeof(schtaboid[k1].toastnode), "%s", taboidTMP[j1].toastoid);
+                            snprintf(schtaboid[k1].toastoid, sizeof(schtaboid[k1].toastoid), "%s", taboidTMP[j1].toastoid);
                         }
 
                         if (strcmp(schtaboid[k1].toastnode, "0") != 0) {
                             toastBootstrap(toastmeta,schtaboid[k1].toastnode);
                         }
 
-                        strcpy(schtaboid[k1].nattr,taboidTMP[j1].nattr);
-                        strcpy(schtaboid[k1].attr,taboidTMP[j1].attr);
-                        strcpy(schtaboid[k1].typ,taboidTMP[j1].typ);
-                        strcpy(schtaboid[k1].attmod,taboidTMP[j1].attmod);
-                        strcpy(schtaboid[k1].attlen,taboidTMP[j1].attlen);
-                        strcpy(schtaboid[k1].attalign,taboidTMP[j1].attalign);
+                        snprintf(schtaboid[k1].nattr, sizeof(schtaboid[k1].nattr), "%s", taboidTMP[j1].nattr);
+                        snprintf(schtaboid[k1].attr, sizeof(schtaboid[k1].attr), "%s", taboidTMP[j1].attr);
+                        snprintf(schtaboid[k1].typ, sizeof(schtaboid[k1].typ), "%s", taboidTMP[j1].typ);
+                        snprintf(schtaboid[k1].attmod, sizeof(schtaboid[k1].attmod), "%s", taboidTMP[j1].attmod);
+                        snprintf(schtaboid[k1].attlen, sizeof(schtaboid[k1].attlen), "%s", taboidTMP[j1].attlen);
+                        snprintf(schtaboid[k1].attalign, sizeof(schtaboid[k1].attalign), "%s", taboidTMP[j1].attalign);
                         k1++;
                     }
                 }
@@ -1424,14 +1427,14 @@ void bootstrap(){
     exmode=CSVform;
     setExportMode_decode(CSVform);
     createDir("log");
-    sprintf(pgDatabaseFile,"%s%s",initDBPath,pgDatabaseFilenode);
+    snprintf(pgDatabaseFile, sizeof(pgDatabaseFile), "%s%s",initDBPath,pgDatabaseFilenode);
 
     infoBootstrap(1,pgDatabaseFile,"","","",0,"",0,"",0);
 
     char logPathSucc[100];
-    sprintf(logPathSucc,"log/boot_%s",DB_BOOTTYPE);
+    snprintf(logPathSucc, sizeof(logPathSucc), "log/boot_%s",DB_BOOTTYPE);
     char logPathErr[100];
-    sprintf(logPathErr,"log/boot_%s",DB_BOOTTYPE);
+    snprintf(logPathErr, sizeof(logPathErr), "log/boot_%s",DB_BOOTTYPE);
 
     setlogLevel(readItemLog);
     readItems(NULL,pgDatabaseFile,DB_ATTR,DB_BOOT,DB_BOOTTYPE,logPathSucc,logPathErr);
@@ -1459,8 +1462,7 @@ void bootstrap(){
              (strcmp(databaseoid[i].database,"restore") != 0) &&
              (strcmp(databaseoid[i].database,"security") != 0)){
             CUR_DBDIR=databaseoid[i].dbpath;
-            strcpy(CUR_DB,databaseoid[i].database);
-            infoBootstrap(2,"",CUR_DB,"","",0,"",0,"",0);
+            snprintf(CUR_DB, 100,  "%s", databaseoid[i].database);            infoBootstrap(2,"",CUR_DB,"","",0,"",0,"",0);
 
             removeDir(CUR_DB);
             createDir(CUR_DB);
@@ -1472,27 +1474,27 @@ void bootstrap(){
             char DBSchemaFile[MiddleAllocSize]="";
 
             char meta[100]="";
-            sprintf(meta,"%s/%s",CUR_DB,"meta");
+            snprintf(meta, sizeof(meta), "%s/%s",CUR_DB,"meta");
             createDir(meta);
 
             char toastmeta[100]="";
-            sprintf(toastmeta,"%s/%s",CUR_DB,"toastmeta");
+            snprintf(toastmeta, sizeof(toastmeta), "%s/%s",CUR_DB,"toastmeta");
             createDir(toastmeta);
 
             char manual[100]="";
-            sprintf(manual,"%s/%s",CUR_DB,"manual");
+            snprintf(manual, sizeof(manual), "%s/%s",CUR_DB,"manual");
             createDir(manual);
 
-            sprintf(TmpDBClassFile, "%s/%s", meta, CLASS_BOOT_FINAL);
-            sprintf(DBClassFile, "%s/%s", meta, CLASS_BOOT);
-            sprintf(DBAttrFile, "%s/%s", meta, ATTR_BOOT);
-            sprintf(DBTypFile, "%s/%s", meta, TYP_BOOT);
-            sprintf(DBSchemaFile, "%s/%s", meta, SCHEMA_BOOT);
+            snprintf(TmpDBClassFile, sizeof(TmpDBClassFile), "%s/%s", meta, CLASS_BOOT_FINAL);
+            snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s", meta, CLASS_BOOT);
+            snprintf(DBAttrFile, sizeof(DBAttrFile), "%s/%s", meta, ATTR_BOOT);
+            snprintf(DBTypFile, sizeof(DBTypFile), "%s/%s", meta, TYP_BOOT);
+            snprintf(DBSchemaFile, sizeof(DBSchemaFile), "%s/%s", meta, SCHEMA_BOOT);
 
-            sprintf(pgClassFile,"%s/%s",CUR_DBDIR,pgClassFilenode);
-            sprintf(pgAttrFile,"%s/%s",CUR_DBDIR,pgAttrFilenode);
-            sprintf(pgTypeFile,"%s/%s",CUR_DBDIR,pgTypeFilenode);
-            sprintf(pgSchemaFile,"%s/%s",CUR_DBDIR,pgSchemaFilendoe);
+            snprintf(pgClassFile, sizeof(pgClassFile), "%s/%s",CUR_DBDIR,pgClassFilenode);
+            snprintf(pgAttrFile, sizeof(pgAttrFile), "%s/%s",CUR_DBDIR,pgAttrFilenode);
+            snprintf(pgTypeFile, sizeof(pgTypeFile), "%s/%s",CUR_DBDIR,pgTypeFilenode);
+            snprintf(pgSchemaFile, sizeof(pgSchemaFile), "%s/%s",CUR_DBDIR,pgSchemaFilendoe);
 
             bootMetaInfo2File(pgSchemaFile,pgClassFile,pgTypeFile,pgAttrFile);
 
@@ -1522,15 +1524,16 @@ void bootstrap(){
 
             for ( i1 = 0 ; i1 < schemalen ; i1++){
                 char *schoid = schoidTMP[i1].oid;
-                strcpy(CUR_SCH,schoidTMP[i1].nspname);
-                if(schemaInDefaultSHCS(CUR_SCH)){
+                snprintf(CUR_SCH, 100,  "%s", schoidTMP[i1].nspname);                if(schemaInDefaultSHCS(CUR_SCH)){
                     continue;
                 }
 
                 char getSchNumCMD[100];
-                sprintf(getSchNumCMD,"cat %s |grep %s|wc -l",DBClassFile,schoid);
+                snprintf(getSchNumCMD, sizeof(getSchNumCMD), "cat %s |grep %s|wc -l",DBClassFile,schoid);
                 char *schtabObj = execCMD(getSchNumCMD);
                 int schtabObjNum = atoi(schtabObj)+20;
+                free(schtabObj);
+                schtabObj=NULL;
                 TABstruct *schtaboid = (TABstruct *)malloc(schtabObjNum * sizeof(TABstruct));
                 if (schtaboid == NULL) {
                     perror("Failed to allocate memory，need to reduceMAX_TAB_OBJvalue");
@@ -1549,10 +1552,10 @@ void bootstrap(){
                             #endif
                             exit(1);
                         }
-                        strcpy(schtaboid[k1].oid,taboidTMP[j1].oid);
-                        strcpy(schtaboid[k1].tab,taboidTMP[j1].tab);
-                        strcpy(schtaboid[k1].nsp,taboidTMP[j1].nsp);
-                        strcpy(schtaboid[k1].filenode,taboidTMP[j1].filenode);
+                        snprintf(schtaboid[k1].oid, sizeof(schtaboid[k1].oid), "%s", taboidTMP[j1].oid);
+                        snprintf(schtaboid[k1].tab, sizeof(schtaboid[k1].tab), "%s", taboidTMP[j1].tab);
+                        snprintf(schtaboid[k1].nsp, sizeof(schtaboid[k1].nsp), "%s", taboidTMP[j1].nsp);
+                        snprintf(schtaboid[k1].filenode, sizeof(schtaboid[k1].filenode), "%s", taboidTMP[j1].filenode);
 
                         if(strcmp(taboidTMP[j1].toastoid,"0") != 0){
                             unsigned int toast2searchIndex = hash(toastTaboid_harray,taboidTMP[j1].toastoid,toastTaboid_harray->allocated);
@@ -1560,27 +1563,27 @@ void bootstrap(){
                             while (node != NULL) {
                                 TABstruct* onatoastoid = (TABstruct*)node->data;
                                 if(strcmp(onatoastoid->oid,taboidTMP[j1].toastoid) == 0){
-                                    strcpy(schtaboid[k1].toastnode,onatoastoid->filenode);
-                                    strcpy(schtaboid[k1].toastoid,onatoastoid->oid);
+                                    snprintf(schtaboid[k1].toastnode, sizeof(schtaboid[k1].toastnode), "%s", onatoastoid->filenode);
+                                    snprintf(schtaboid[k1].toastoid, sizeof(schtaboid[k1].toastoid), "%s", onatoastoid->oid);
                                 }
                                 node = node->next;
                             }
                         }
                         else{
-                            strcpy(schtaboid[k1].toastnode,taboidTMP[j1].toastoid);
-                            strcpy(schtaboid[k1].toastoid,taboidTMP[j1].toastoid);
+                            snprintf(schtaboid[k1].toastnode, sizeof(schtaboid[k1].toastnode), "%s", taboidTMP[j1].toastoid);
+                            snprintf(schtaboid[k1].toastoid, sizeof(schtaboid[k1].toastoid), "%s", taboidTMP[j1].toastoid);
                         }
 
                         if (strcmp(schtaboid[k1].toastnode, "0") != 0) {
                             toastBootstrap(toastmeta,schtaboid[k1].toastnode);
                         }
 
-                        strcpy(schtaboid[k1].nattr,taboidTMP[j1].nattr);
-                        strcpy(schtaboid[k1].attr,taboidTMP[j1].attr);
-                        strcpy(schtaboid[k1].typ,taboidTMP[j1].typ);
-                        strcpy(schtaboid[k1].attmod,taboidTMP[j1].attmod);
-                        strcpy(schtaboid[k1].attlen,taboidTMP[j1].attlen);
-                        strcpy(schtaboid[k1].attalign,taboidTMP[j1].attalign);
+                        snprintf(schtaboid[k1].nattr, sizeof(schtaboid[k1].nattr), "%s", taboidTMP[j1].nattr);
+                        snprintf(schtaboid[k1].attr, sizeof(schtaboid[k1].attr), "%s", taboidTMP[j1].attr);
+                        snprintf(schtaboid[k1].typ, sizeof(schtaboid[k1].typ), "%s", taboidTMP[j1].typ);
+                        snprintf(schtaboid[k1].attmod, sizeof(schtaboid[k1].attmod), "%s", taboidTMP[j1].attmod);
+                        snprintf(schtaboid[k1].attlen, sizeof(schtaboid[k1].attlen), "%s", taboidTMP[j1].attlen);
+                        snprintf(schtaboid[k1].attalign, sizeof(schtaboid[k1].attalign), "%s", taboidTMP[j1].attalign);
                         k1++;
                     }
                 }
@@ -1623,26 +1626,22 @@ void bootMetaInfo2File(char *pgSchemaFile,char *pgClassFile,char *pgTypeFile,cha
         if(strcmp(b2fPArray[h].sourceFile,"pgSchemaFile") == 0){
             sourceFile=(char *)malloc((strlen(pgSchemaFile) + 1) * sizeof(char));
             if (sourceFile != NULL){
-                strcpy(sourceFile,pgSchemaFile);
-            }
+                snprintf(sourceFile, 1024,  "%s", pgSchemaFile);            }
         }
         else if (strcmp(b2fPArray[h].sourceFile,"pgClassFile") == 0){
             sourceFile=(char *)malloc((strlen(pgClassFile) + 1) * sizeof(char));
             if (sourceFile != NULL){
-                strcpy(sourceFile,pgClassFile);
-            }
+                snprintf(sourceFile, 1024,  "%s", pgClassFile);            }
         }
         else if(strcmp(b2fPArray[h].sourceFile,"pgAttrFile") == 0){
             sourceFile=(char *)malloc((strlen(pgAttrFile) + 1) * sizeof(char));
             if (sourceFile != NULL){
-                strcpy(sourceFile,pgAttrFile);
-            }
+                snprintf(sourceFile, 1024,  "%s", pgAttrFile);            }
         }
         else if(strcmp(b2fPArray[h].sourceFile,"pgTypeFile") == 0){
             sourceFile=(char *)malloc((strlen(pgTypeFile) + 1) * sizeof(char));
             if (sourceFile != NULL){
-                strcpy(sourceFile,pgTypeFile);
-            }
+                snprintf(sourceFile, 1024,  "%s", pgTypeFile);            }
         }
         if (sourceFile != NULL) {
             boot2File(b2fPArray[h].ATTR_ARRAY,sourceFile,b2fPArray[h].SOME_BOOT,b2fPArray[h].SOME_BOOTTYPE);
@@ -1667,12 +1666,12 @@ void bootMetaInfo2File(char *pgSchemaFile,char *pgClassFile,char *pgTypeFile,cha
 void boot2File(char ATTR_ARRAY[],char *sourceFile, char *SOME_BOOT, char *SOME_BOOTTYPE){
     resetArray2Process(attr2Process);
     char DestFile[MiddleAllocSize];
-    sprintf(DestFile, "%s/%s/%s", CUR_DB, "meta",SOME_BOOT);
+    snprintf(DestFile, sizeof(DestFile), "%s/%s/%s", CUR_DB, "meta",SOME_BOOT);
 
     char logPathSucc[100];
-    sprintf(logPathSucc,"log/boot_%s_Succ",SOME_BOOTTYPE);
+    snprintf(logPathSucc, sizeof(logPathSucc), "log/boot_%s_Succ",SOME_BOOTTYPE);
     char logPathErr[100];
-    sprintf(logPathErr,"log/boot_%s_Err",SOME_BOOTTYPE);
+    snprintf(logPathErr, sizeof(logPathErr), "log/boot_%s_Err",SOME_BOOTTYPE);
     setlogLevel(readItemLog);
     int ret = readItems(NULL,sourceFile,ATTR_ARRAY,DestFile,SOME_BOOTTYPE,logPathSucc,logPathErr);
     if(ret == FAILOPEN_RET){
@@ -1696,8 +1695,8 @@ void boot2File(char ATTR_ARRAY[],char *sourceFile, char *SOME_BOOT, char *SOME_B
  */
 void flushFinalCLass(TABstruct *taboid,int tabsize){
     char filename[100];
-    sprintf(filename, "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH,TABLE_BOOT);
-    FILE *fp = fopen(filename,"w");
+    snprintf(filename, 256,  "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH,TABLE_BOOT);    FILE *fp = pdu_fopen(filename,"w");
+    if (fp == NULL) return;
 
     int i;
 
@@ -1707,10 +1706,11 @@ void flushFinalCLass(TABstruct *taboid,int tabsize){
         char *tmpstr=NULL;
 
         if ( strlen(taboid[i].attr) > 0 ){
-            tmpstr = (char *)malloc( (sizeof(char))*(sizeof( taboid[i].oid)+sizeof(taboid[i].filenode)+
+            tmpstr = (char *)pdu_malloc( (sizeof(char))*(sizeof( taboid[i].oid)+sizeof(taboid[i].filenode)+
                         sizeof(taboid[i].nsp)+sizeof(taboid[i].tab)+
                         sizeof(taboid[i].attr)+sizeof(taboid[i].typ)+sizeof(taboid[i].toastoid)));
-            sprintf(tmpstr, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+            if (tmpstr == NULL) continue;
+            snprintf(tmpstr, 30000, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
                                                                 taboid[i].oid,taboid[i].filenode,
                                                                 taboid[i].toastoid,taboid[i].toastnode,
                                                                 taboid[i].nsp, taboid[i].tab,
@@ -1749,8 +1749,7 @@ void useDB(char *former,char *latter){
     int i;
     for ( i = 0; i < dosize; i++ ) {
         if ( strcmp(latter,databaseoid[i].database) == 0 ){
-            strcpy(CUR_DB,databaseoid[i].database);
-            CUR_DBDIR=databaseoid[i].dbpath;
+            snprintf(CUR_DB, 100,  "%s", databaseoid[i].database);            CUR_DBDIR=databaseoid[i].dbpath;
             isRightDB=1;
         };
     }
@@ -1762,32 +1761,30 @@ void useDB(char *former,char *latter){
         #endif
     }
     else{
-        strcpy(CUR_SCH,"public");
-        char DBSchemaFile[MiddleAllocSize];
-        sprintf(DBSchemaFile, "%s/%s/%s", CUR_DB, "meta",SCHEMA_BOOT);
+        snprintf(CUR_SCH, 100,  "%s", "public");        char DBSchemaFile[MiddleAllocSize];
+        snprintf(DBSchemaFile, sizeof(DBSchemaFile), "%s/%s/%s", CUR_DB, "meta",SCHEMA_BOOT);
         schoid=bootSCHStruct(DBSchemaFile);
         if(schoid == NULL){
-            strcpy(CUR_DB,"PDU");
-            CUR_DBDIR=NULL;
+            snprintf(CUR_DB, 100,  "%s", "PDU");            CUR_DBDIR=NULL;
             return;
         }
         schemasize=getLineNum(DBSchemaFile);
         char DBClassFile[MiddleAllocSize];
-        sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
+        snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
         memset(CURDBFullPath,0,550);
         if(strcmp(CUR_DB,"restore") == 0){
-            sprintf(CURDBFullPath,"%s","restore/datafile");
+            snprintf(CURDBFullPath, sizeof(CURDBFullPath), "%s","restore/datafile");
             initCURDBPath(CURDBFullPath);
             isSingleDB = 0;
         }
         else if(strncmp(CUR_DBDIR,"xman",4) == 0){
             CUR_DBDIR=CUR_DBDIR+4;
-            sprintf(CURDBFullPath,"%s",CUR_DBDIR);
+            snprintf(CURDBFullPath, sizeof(CURDBFullPath), "%s",CUR_DBDIR);
             initCURDBPath(CURDBFullPath);
             isSingleDB =1;
         }
         else{
-            sprintf(CURDBFullPath,"%s",CUR_DBDIR);
+            snprintf(CURDBFullPath, sizeof(CURDBFullPath), "%s",CUR_DBDIR);
             initCURDBPath(CURDBFullPath);
             isSingleDB = 0;
         }
@@ -1809,7 +1806,7 @@ void useDB(char *former,char *latter){
             if(schemaInDefaultSHCS(schoid[i].nspname)){
                 continue;
             }
-            sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",schoid[i].nspname, TABLE_BOOT);
+            snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",schoid[i].nspname, TABLE_BOOT);
             int schTabSize=getLineNum(DBClassFile);
             printf("%s│    %-23s│  %-10d│%s\n",COLOR_SCHEMA,schoid[i].nspname,schTabSize,C_RESET);
         }
@@ -1835,8 +1832,7 @@ void setSCH(char *former,char *latter){
     int i;
     for ( i = 0; i < schemasize; i++ ) {
         if ( strcmp(latter,schoid[i].nspname) == 0 ){
-            strcpy(CUR_SCH,schoid[i].nspname);
-            isRightSCH=1;
+            snprintf(CUR_SCH, 100,  "%s", schoid[i].nspname);            isRightSCH=1;
         };
     }
     if ( !isRightSCH ){
@@ -1844,7 +1840,7 @@ void setSCH(char *former,char *latter){
     }
     else{
         char DBClassFile[MiddleAllocSize];
-        sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
+        snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
         if(taboid != NULL){
             free(taboid);
             taboid=NULL;
@@ -1927,12 +1923,12 @@ void getTabSize(TABSIZEstruct *tabVol){
 
         for( j = 0; j < 500; j++){//总共支持500GB的单表大小
             if (j == 0){
-                sprintf(tabPath,"%s/%s",CURDBFullPath,taboid[i].filenode);
-                sprintf(tabToastPath,"%s/%s",CURDBFullPath,taboid[i].toastoid);
+                snprintf(tabPath, sizeof(tabPath), "%s/%s",CURDBFullPath,taboid[i].filenode);
+                snprintf(tabToastPath, sizeof(tabToastPath), "%s/%s",CURDBFullPath,taboid[i].toastoid);
             }
             else{
-                sprintf(tabPath,"%s/%s.%d",CURDBFullPath,taboid[i].filenode,j);
-                sprintf(tabToastPath,"%s/%s.%d",CURDBFullPath,taboid[i].toastoid,j);
+                snprintf(tabPath, sizeof(tabPath), "%s/%s.%d",CURDBFullPath,taboid[i].filenode,j);
+                snprintf(tabToastPath, sizeof(tabToastPath), "%s/%s.%d",CURDBFullPath,taboid[i].toastoid,j);
             }
             struct stat file_stat1;
             if (stat(tabPath, &file_stat1) != -1 && strlen(taboid[i].filenode)!= 0 ) {
@@ -1950,8 +1946,8 @@ void getTabSize(TABSIZEstruct *tabVol){
             }
         }
 
-        sprintf(tabVol[i].vol,"%llu",totalSize);
-        sprintf(tabVol[i].tab,"%s",taboid[i].tab);
+        snprintf(tabVol[i].vol, sizeof(tabVol[i].vol), "%llu",totalSize);
+        snprintf(tabVol[i].tab, sizeof(tabVol[i].tab), "%s",taboid[i].tab);
     }
     qsort(tabVol, tabSize, sizeof(TABSIZEstruct), tabVolSort);
 }
@@ -1962,30 +1958,25 @@ void getFormVol(char *vol,char *ret){
     }
     unsigned long long numvol = strtoull(vol, NULL, 10);
     if (numvol == 0) {
-        sprintf(ret,"0");
-        return;
+        snprintf(ret, 10240,  "0");        return;
     }
 
     if (numvol >= (1024ULL * 1024 * 1024)) {
         double value = (double)numvol / (1024 * 1024 * 1024);
-        sprintf(ret,"%.2f GB",value);
-        return;
+        snprintf(ret, 10240,  "%.2f GB",value);        return;
     }
 
     if (numvol >= (1024ULL * 1024)) {
         double value = (double)numvol / (1024 * 1024);
-        sprintf(ret,"%.2f MB",value);
-        return;
+        snprintf(ret, 10240,  "%.2f MB",value);        return;
     }
 
     if (numvol >= 1024ULL) {
         double value = (double)numvol / 1024;
-        sprintf(ret,"%.2f KB",value);
-        return;
+        snprintf(ret, 10240,  "%.2f KB",value);        return;
     }
 
-    sprintf(ret,"%llu Bytes",numvol);
-    return;
+    snprintf(ret, 10240,  "%llu Bytes",numvol);    return;
 }
 
 
@@ -2058,7 +2049,7 @@ void SHOW(char *former){
         }
         else{
             char DBClassFile[MiddleAllocSize];
-            sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
+            snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
             int i;
 
             infoSchHeader();
@@ -2066,7 +2057,7 @@ void SHOW(char *former){
                 if(schemaInDefaultSHCS(schoid[i].nspname)){
                     continue;
                 }
-                sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",schoid[i].nspname, TABLE_BOOT);
+                snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",schoid[i].nspname, TABLE_BOOT);
                 int schTabSize=getLineNum(DBClassFile);
                 printf("%s│    %-23s│  %-10d│%s\n",COLOR_SCHEMA,schoid[i].nspname,schTabSize,C_RESET);
                 nSchDisplayed++;
@@ -2107,13 +2098,13 @@ void DESC(char *former,char *latter){
         for ( i = 0; i < tabSize; i++ ) {
             if( strcmp( taboid[i].tab,latter) == 0 ){
                 char attr[10240]="";
-                strcpy(attr,taboid[i].attr);
+                snprintf(attr, sizeof(attr), "%s", taboid[i].attr);
                 char typ[10240]="";
-                strcpy(typ,taboid[i].typ);
+                snprintf(typ, sizeof(typ), "%s", taboid[i].typ);
                 char attmod[10240]="";
-                strcpy(attmod,taboid[i].attmod);
+                snprintf(attmod, sizeof(attmod), "%s", taboid[i].attmod);
                 char descTyp[5];
-                strcpy(descTyp,former);
+                snprintf(descTyp, sizeof(descTyp), "%s", former);
 
                 if(strcmp(descTyp,"\\d+") == 0){
                     char *ddltabname = quotedIfUpper(taboid[i].tab);
@@ -2171,14 +2162,14 @@ int allocate_start_end_to_parray(char *directory1,WALFILE *array) {
                 char fullPath[1024];
                 struct stat file_stat;
 
-                sprintf(fullPath,"%s/%s",directory1,entry1->d_name);
+                snprintf(fullPath, sizeof(fullPath), "%s/%s",directory1,entry1->d_name);
                 if (stat(fullPath, &file_stat) == -1) {
                     perror("FAIL to get file status");
                     continue;
                 }
 
                 if (file_stat.st_size > 1048576 && IsXLogFileName(entry1->d_name)){
-                    strcpy(array[arraySize].walnames,entry1->d_name);
+                    snprintf(array[arraySize].walnames, sizeof(array[arraySize].walnames), "%s", entry1->d_name);
                     arraySize++;
                 }
             }
@@ -2207,7 +2198,7 @@ int allocate_start_end_to_parray(char *directory1, WALFILE *array) {
     int arraySize = 0;
 
     char searchPath[1024];
-    sprintf(searchPath, "%s\\*", directory1);
+    snprintf(searchPath, sizeof(searchPath), "%s\\*", directory1);
 
     hFind = FindFirstFile(searchPath, &findData);
     if (hFind == INVALID_HANDLE_VALUE) {
@@ -2219,7 +2210,7 @@ int allocate_start_end_to_parray(char *directory1, WALFILE *array) {
                 char fullPath[1024];
                 BY_HANDLE_FILE_INFORMATION file_info;
 
-                sprintf(fullPath, "%s\\%s", directory1, findData.cFileName);
+                snprintf(fullPath, sizeof(fullPath), "%s\\%s", directory1, findData.cFileName);
 
                 HANDLE hFile = CreateFile(fullPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
                 if (hFile == INVALID_HANDLE_VALUE) {
@@ -2240,7 +2231,7 @@ int allocate_start_end_to_parray(char *directory1, WALFILE *array) {
                 fileSize.LowPart = file_info.nFileSizeLow;
 
                 if (fileSize.QuadPart > 10485760 && IsXLogFileName(findData.cFileName)) {
-                    strcpy(array[arraySize].walnames, findData.cFileName);
+                    snprintf(array[arraySize].walnames, sizeof(array[arraySize].walnames), "%s", findData.cFileName);
                     arraySize++;
                 }
             }
@@ -2276,8 +2267,8 @@ void initWalScan(int flag,WALFILE *archDirFiles_array,WALFILE *walDirFiles_array
     if(flag == SCANINIT){
         GetTxRetAll = parray_new();
     }
-    sprintf(archivedir,"%s",initArchPath);
-    sprintf(waldatadir,"%s%s",initDBPath,"pg_wal");
+    snprintf(archivedir, sizeof(archivedir), "%s",initArchPath);
+    snprintf(waldatadir, sizeof(waldatadir), "%s%s",initDBPath,"pg_wal");
 
     archWaldirNum = allocate_start_end_to_parray(archivedir,archDirFiles_array);
     pgwalWaldirNum = allocate_start_end_to_parray(waldatadir,walDirFiles_array);
@@ -2298,8 +2289,8 @@ void printLsnT()
         char ret1[60];
         char ret2[60];
 
-        sprintf(ret1,"         %s",elem->startLSNforTOAST);
-        sprintf(ret2,"         %s",elem->endLSNforTOAST);
+        snprintf(ret1, sizeof(ret1), "         %s",elem->startLSNforTOAST);
+        snprintf(ret2, sizeof(ret2), "         %s",elem->endLSNforTOAST);
 
         printfParam("startlsnt",ret1);
         printfParam("endlsnt",ret2);
@@ -2345,17 +2336,17 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
     char datafile2rd[50];
     char oldDatafile2rd[50];
     char toastfile2rd[50];
-    strcpy(datafile2rd,datafile);
-    strcpy(oldDatafile2rd,oldDatafile);
-    strcpy(toastfile2rd,toastfile);
+    snprintf(datafile2rd, sizeof(datafile2rd), "%s", datafile);
+    snprintf(oldDatafile2rd, sizeof(oldDatafile2rd), "%s", oldDatafile);
+    snprintf(toastfile2rd, sizeof(toastfile2rd), "%s", toastfile);
 
     parray *GetTxRetFromWal=NULL;
     parray *GetTxRetFromArch=NULL;
 
     if(strlen(manualSrtWal) > 0 && strlen(manualEndWal) == 0){
         if(IsXLogFileName(manualSrtWal)){
-            strcpy(start_archfilename,manualSrtWal);
-            strcpy(end_archfilename,archDirFiles[archWaldirNum-1].walnames);
+            snprintf(start_archfilename, sizeof(start_archfilename), "%s", manualSrtWal);
+            snprintf(end_archfilename, sizeof(end_archfilename), "%s", archDirFiles[archWaldirNum-1].walnames);
         }
         else{
             ErrorWalname();
@@ -2364,8 +2355,8 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
     }
     else if(strlen(manualSrtWal) == 0 && strlen(manualEndWal) > 0){
         if(IsXLogFileName(manualEndWal)){
-            strcpy(end_archfilename,manualEndWal);
-            strcpy(start_archfilename,archDirFiles[0].walnames);
+            snprintf(end_archfilename, sizeof(end_archfilename), "%s", manualEndWal);
+            snprintf(start_archfilename, sizeof(start_archfilename), "%s", archDirFiles[0].walnames);
         }
         else{
             ErrorWalname();
@@ -2374,8 +2365,8 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
     }
     else if(strlen(manualSrtWal) > 0 && strlen(manualEndWal) > 0){
         if(IsXLogFileName(manualEndWal) && IsXLogFileName(manualSrtWal)){
-            strcpy(start_archfilename,manualSrtWal);
-            strcpy(end_archfilename,manualEndWal);
+            snprintf(start_archfilename, sizeof(start_archfilename), "%s", manualSrtWal);
+            snprintf(end_archfilename, sizeof(end_archfilename), "%s", manualEndWal);
         }
         else{
             ErrorWalname();
@@ -2384,8 +2375,8 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
     }
 
     else{
-        strcpy(start_archfilename,archDirFiles[0].walnames);
-        strcpy(end_archfilename,archDirFiles[archWaldirNum-1].walnames);
+        snprintf(start_archfilename, sizeof(start_archfilename), "%s", archDirFiles[0].walnames);
+        snprintf(end_archfilename, sizeof(end_archfilename), "%s", archDirFiles[archWaldirNum-1].walnames);
     }
 
     if(!IsXLogFileName(start_archfilename) || !IsXLogFileName(end_archfilename)){
@@ -2447,8 +2438,8 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
         #endif
         return FAILURE_RET;
     }
-    strcpy(start_walfilename,walDirFiles[0].walnames);
-    strcpy(end_walfilename,walDirFiles[pgwalWaldirNum-1].walnames);
+    snprintf(start_walfilename, sizeof(start_walfilename), "%s", walDirFiles[0].walnames);
+    snprintf(end_walfilename, sizeof(end_walfilename), "%s", walDirFiles[pgwalWaldirNum-1].walnames);
 
     if(flag == DELRESTORE){
         int startWalDiff=countFilesBetween(start_archfilename,startwal);
@@ -2483,8 +2474,7 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
     resetArray2Process(attr2Process);
     if(strcmp(typ,"xman") != 0){
         char *attr2DecodeTMP = (char *)malloc((strlen(typ)+1)*sizeof(char));
-        strcpy(attr2DecodeTMP,typ);
-        int nAttr=0;
+        snprintf(attr2DecodeTMP, 10240,  "%s", typ);        int nAttr=0;
         char *attrChars[MAX_COL_NUM];
         for (int i = 0; i < MAX_COL_NUM; i++) {
             attrChars[i] = (char *)malloc(20);
@@ -2521,11 +2511,9 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
                 flag,"0","0",toastfile,oldToastfile,tabname,
                 TxForRestore,1,attr2Process,taboid);
         char DBDIRcopy[MAXPGPATH]={0};
-        strcpy(DBDIRcopy,CUR_DBDIR);
-        strcpy(CUR_DBDIR,"restore/datafile");
-        toastBootstrap("restore/toastmeta",taboid->toastnode);
-        strcpy(CUR_DBDIR,DBDIRcopy);
-        int toastInitRet = initToastHash("restore",taboid->toastnode);
+        snprintf(DBDIRcopy, sizeof(DBDIRcopy), "%s", CUR_DBDIR);
+        snprintf(CUR_DBDIR, 1024,  "%s", "restore/datafile");        toastBootstrap("restore/toastmeta",taboid->toastnode);
+        snprintf(CUR_DBDIR, 1024,  "%s", DBDIRcopy);        int toastInitRet = initToastHash("restore",taboid->toastnode);
         initToastId(taboid->toastnode);
         setToastHash(toastHash);
     }
@@ -2570,8 +2558,13 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
  */
 void SCAN(char *former,char *latter)
 {
-    WALFILE *walDirFiles_array = (WALFILE*)malloc(sizeof(WALFILE)*2048);
-    WALFILE *archDirFiles_array = (WALFILE*)malloc(sizeof(WALFILE)*2048);
+    WALFILE *walDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
+    WALFILE *archDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
+    if (walDirFiles_array == NULL || archDirFiles_array == NULL) {
+        free(walDirFiles_array);
+        free(archDirFiles_array);
+        return;
+    }
 
     initWalScan(SCANINIT,archDirFiles_array,walDirFiles_array);
     unloadTimer("start");
@@ -2630,7 +2623,7 @@ void SCAN(char *former,char *latter)
     }
     else if( strcmp(latter,"manual")==0 ){
         char sqlPath[500];
-        sprintf(sqlPath,"%s/manual",CUR_DB);
+        snprintf(sqlPath, sizeof(sqlPath), "%s/manual",CUR_DB);
         parray *filenamesFromManual=getfilenameParray(sqlPath);
         if(parray_num(filenamesFromManual) == 0){
             #ifdef CN
@@ -2644,7 +2637,7 @@ void SCAN(char *former,char *latter)
         for(int i=0;i<parray_num(filenamesFromManual);i++){
             char fullsqlPath[600];
             char *file = parray_get(filenamesFromManual,i);
-            sprintf(fullsqlPath,"%s/%s",sqlPath,file);
+            snprintf(fullsqlPath, sizeof(fullsqlPath), "%s/%s",sqlPath,file);
             getMetaFromManul(fullsqlPath,CUR_DB);
         }
 
@@ -2654,7 +2647,7 @@ void SCAN(char *former,char *latter)
         for ( i = 0; i < tabSize; i++ ) {
             if( strcmp( taboid[i].tab,latter) == 0 ){
                 char pgFilePath[1024]="";
-                sprintf(pgFilePath, "%s/%s", CUR_DBDIR,taboid[i].filenode);
+                snprintf(pgFilePath, sizeof(pgFilePath), "%s/%s", CUR_DBDIR,taboid[i].filenode);
                 #ifdef EN
                 printf("\n%sScanning %s%s%s %sRecords for table<%s>...%s\n\n",C_WHITE2,COLOR_ERROR,resStr,C_RESET,C_WHITE2,taboid[i].tab,C_RESET);
                 #else
@@ -2720,12 +2713,12 @@ void SCAN(char *former,char *latter)
                 if(restoreMode == TxRestore){
                     for (int j = 0; j < parray_num(GetTxRetAll); j++) {
                         DELstruct *elem = parray_get(GetTxRetAll,j);
-                        strcpy(elem->tabname,taboid[i].tab);
-                        strcpy(elem->datafile,taboid[i].filenode);
-                        strcpy(elem->oldDatafile,taboid[i].oid);
-                        strcpy(elem->toast,taboid[i].toastnode);
-                        strcpy(elem->oldToast,taboid[i].toastoid);
-                        strcpy(elem->typ,taboid[i].typ);
+                        snprintf(elem->tabname, sizeof(elem->tabname), "%s", taboid[i].tab);
+                        snprintf(elem->datafile, sizeof(elem->datafile), "%s", taboid[i].filenode);
+                        snprintf(elem->oldDatafile, sizeof(elem->oldDatafile), "%s", taboid[i].oid);
+                        snprintf(elem->toast, sizeof(elem->toast), "%s", taboid[i].toastnode);
+                        snprintf(elem->oldToast, sizeof(elem->oldToast), "%s", taboid[i].toastoid);
+                        snprintf(elem->typ, sizeof(elem->typ), "%s", taboid[i].typ);
                         elem->taboid = &taboid[i];
                         infoTxScanResult(elem,resStr);
                     }
@@ -2734,12 +2727,12 @@ void SCAN(char *former,char *latter)
                 }
                 else if (restoreMode == periodRestore){
                     DELstruct *elem = parray_get(GetTxRetAll,0);
-                    strcpy(elem->tabname,taboid[i].tab);
-                    strcpy(elem->datafile,taboid[i].filenode);
-                    strcpy(elem->oldDatafile,taboid[i].oid);
-                    strcpy(elem->toast,taboid[i].toastnode);
-                    strcpy(elem->oldToast,taboid[i].toastoid);
-                    strcpy(elem->typ,taboid[i].typ);
+                    snprintf(elem->tabname, sizeof(elem->tabname), "%s", taboid[i].tab);
+                    snprintf(elem->datafile, sizeof(elem->datafile), "%s", taboid[i].filenode);
+                    snprintf(elem->oldDatafile, sizeof(elem->oldDatafile), "%s", taboid[i].oid);
+                    snprintf(elem->toast, sizeof(elem->toast), "%s", taboid[i].toastnode);
+                    snprintf(elem->oldToast, sizeof(elem->oldToast), "%s", taboid[i].toastoid);
+                    snprintf(elem->typ, sizeof(elem->typ), "%s", taboid[i].typ);
                     elem->taboid = &taboid[i];
                     infoTimeScanResult(elem,resStr,SrtTime,EndTime);
                     isTxScanned = 0;
@@ -2787,13 +2780,14 @@ void RESTORE(char *former,char *latter,char *third,char *fourth)
     char logPathSucc[100];
     char logPathErr[100];
     createDir("log");
-    sprintf(logPathSucc,"log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"restore",latter,"succ.txt");
-    sprintf(logPathErr,"log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"restore",latter,"err.txt");
-    FILE *logSucc=fopen(logPathSucc,"w");
-    FILE *logErr=fopen(logPathErr,"w");
+    snprintf(logPathSucc, sizeof(logPathSucc), "log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"restore",latter,"succ.txt");
+    snprintf(logPathErr, sizeof(logPathErr), "log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"restore",latter,"err.txt");
+    FILE *logSucc=pdu_fopen(logPathSucc,"w");
+    FILE *logErr=pdu_fopen(logPathErr,"w");
 
-    char *txRequested = (char*)malloc(sizeof(char)*sizeof(latter));
-    strcpy(txRequested,third);
+    char *txRequested = (char*)pdu_malloc(256);
+    if (txRequested == NULL) return;
+    snprintf(txRequested, 256, "%s", third);
     trim_char(txRequested,' ');
 
     if(TxSaved_paaray == NULL && strcmp(latter,"tab") != 0 && strcmp(latter,"db") != 0){
@@ -2857,8 +2851,13 @@ void RESTORE(char *former,char *latter,char *third,char *fourth)
             return;
         }
 
-        WALFILE *walDirFiles_array = (WALFILE*)malloc(sizeof(WALFILE)*2048);
-        WALFILE *archDirFiles_array = (WALFILE*)malloc(sizeof(WALFILE)*2048);
+        WALFILE *walDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
+        WALFILE *archDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
+        if (walDirFiles_array == NULL || archDirFiles_array == NULL) {
+            free(walDirFiles_array);
+            free(archDirFiles_array);
+            return;
+        }
 
         initWalScan(RESTOREINIT,archDirFiles_array,walDirFiles_array);
 
@@ -2941,7 +2940,7 @@ void ADD_TAB(char *former,char *latter,char *third,char *fourth){
     }
 
     char addFilePath[16+strlen(latter)];
-    sprintf(addFilePath,"restore/datafile/%s",latter);
+    snprintf(addFilePath, sizeof(addFilePath), "restore/datafile/%s",latter);
     FILE *addfp =fopen(addFilePath,"rb");
     if(addfp == NULL){
         #ifdef CN
@@ -2964,8 +2963,7 @@ void ADD_TAB(char *former,char *latter,char *third,char *fourth){
     memset(alignStr,0,nattr*10);
     memset(item,0,10240);
     getAttrAlignAndAttlen(fourth,alignStr,attlenStr);
-    sprintf(item,"%s\t%s\tTOASTOID\tTOASTNODE\t2200\t%s\tATTR\t%s\t%d\tMOD\t%s\t%s\n",latter,latter,third,fourth,nattr,attlenStr,alignStr);
-
+    snprintf(item, 10240, "%s\t%s\tTOASTOID\tTOASTNODE\t2200\t%s\tATTR\t%s\t%d\tMOD\t%s\t%s\n",latter,latter,third,fourth,nattr,attlenStr,alignStr);
     fputs(item,pgPublicFile);
     fclose(pgPublicFile);
 
@@ -3046,30 +3044,30 @@ int unloadTAB(char *tabname){
     int i;
     char schPath[100];
     int readRet;
-    sprintf(schPath,"%s/%s",CUR_DB,CUR_SCH);
+    snprintf(schPath, sizeof(schPath), "%s/%s",CUR_DB,CUR_SCH);
     createDir(schPath);
 
     for ( i = 0; i < tabSize; i++ ) {
         if( strcmp( taboid[i].tab,tabname) == 0 ){
             char pgFilePath[600]="";
             if(strcmp(CUR_DB,"restore") == 0){
-                sprintf(pgFilePath, "%s/%s", CURDBFullPath,taboid[i].filenode);
+                snprintf(pgFilePath, sizeof(pgFilePath), "%s/%s", CURDBFullPath,taboid[i].filenode);
                 char toastmeta[100]="";
-                sprintf(toastmeta,"%s/%s",CUR_DB,"toastmeta");
+                snprintf(toastmeta, sizeof(toastmeta), "%s/%s",CUR_DB,"toastmeta");
                 toastBootstrap(toastmeta,taboid[i].toastnode);
 
             }
             else if(isSingleDB){
-                sprintf(pgFilePath, "%s/%s", CUR_DBDIR,taboid[i].filenode);
+                snprintf(pgFilePath, sizeof(pgFilePath), "%s/%s", CUR_DBDIR,taboid[i].filenode);
             }
             else{
-                sprintf(pgFilePath, "%s/%s",CUR_DBDIR,taboid[i].filenode);
+                snprintf(pgFilePath, sizeof(pgFilePath), "%s/%s",CUR_DBDIR,taboid[i].filenode);
             }
 
             char logPathSucc[100];
-            sprintf(logPathSucc,"log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"unload",tabname,"succ.txt");
+            snprintf(logPathSucc, sizeof(logPathSucc), "log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"unload",tabname,"succ.txt");
             char logPathErr[100];
-            sprintf(logPathErr,"log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"unload",tabname,"err.txt");
+            snprintf(logPathErr, sizeof(logPathErr), "log/%s_%s_%s_%s_%s",CUR_DB,CUR_SCH,"unload",tabname,"err.txt");
 
             initToastId(taboid[i].toastnode);
             int toastInitRet = initToastHash(CUR_DB,taboid[i].toastnode);
@@ -3125,15 +3123,14 @@ int unloadSCH(char *schemaname){
         if( strcmp(schemaname,schoid[j].nspname) == 0 ){
             harray *unloadHash = harray_new(HARRAYINT);
             char schPath[100];
-            sprintf(schPath,"%s/%s",CUR_DB,schemaname);
+            snprintf(schPath, sizeof(schPath), "%s/%s",CUR_DB,schemaname);
             createDir(schPath);
 
             char sch2copy[100];
-            strcpy(sch2copy,CUR_SCH);
-            strcpy(CUR_SCH,schemaname);
-
+            snprintf(sch2copy, sizeof(sch2copy), "%s", CUR_SCH);
+            snprintf(CUR_SCH, 100,  "%s", schemaname);
             char rec[100]={0};
-            sprintf(rec,"%s/%s/.rec",CUR_DB,CUR_SCH);
+            snprintf(rec, sizeof(rec), "%s/%s/.rec",CUR_DB,CUR_SCH);
             FILE *recExist = fopen(rec,"r");
             FILE *recFp = NULL;
             char *recMode = NULL;
@@ -3143,14 +3140,14 @@ int unloadSCH(char *schemaname){
             }
 
             char logPathSucc[100];
-            sprintf(logPathSucc,"log/%s_%s_%s_%s",CUR_DB,"unload_schema",CUR_SCH,"succ.txt");
+            snprintf(logPathSucc, sizeof(logPathSucc), "log/%s_%s_%s_%s",CUR_DB,"unload_schema",CUR_SCH,"succ.txt");
             char logPathErr[100];
-            sprintf(logPathErr,"log/%s_%s_%s_%s",CUR_DB,"unload_schema",CUR_SCH,"err.txt");
+            snprintf(logPathErr, sizeof(logPathErr), "log/%s_%s_%s_%s",CUR_DB,"unload_schema",CUR_SCH,"err.txt");
             unlink(logPathSucc);
             unlink(logPathErr);
 
             char DBClassFile[MiddleAllocSize];
-            sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
+            snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
             if(taboid != NULL){
                 free(taboid);
                 taboid=NULL;
@@ -3169,9 +3166,9 @@ int unloadSCH(char *schemaname){
                 int readRet;
                 char pgFilePath[600]="";
                 if(isSingleDB){
-                    sprintf(pgFilePath, "%s/%s", CUR_DBDIR,taboid[i].filenode);
+                    snprintf(pgFilePath, sizeof(pgFilePath), "%s/%s", CUR_DBDIR,taboid[i].filenode);
                 }else{
-                    sprintf(pgFilePath, "%s/%s",CUR_DBDIR,taboid[i].filenode);
+                    snprintf(pgFilePath, sizeof(pgFilePath), "%s/%s",CUR_DBDIR,taboid[i].filenode);
                 }
                 initToastId(taboid[i].toastnode);
                 int toastInitRet = initToastHash(CUR_DB,taboid[i].toastnode);
@@ -3188,11 +3185,11 @@ int unloadSCH(char *schemaname){
                         ErrorToastNoExist((Oid)atoi(taboid[i].toastnode));
                     }
                     char err3[1024];
-                    FILE *logErr = fopen(logPathErr,"a");
+                    FILE *logErr = pdu_fopen(logPathErr,"a");
                     #ifdef EN
-                    sprintf(err3,"FAIL PARSING TABLE <%s>,DATAFILE<%s>\n",taboid[i].tab,pgFilePath);
+                    snprintf(err3, sizeof(err3), "FAIL PARSING TABLE <%s>,DATAFILE<%s>\n",taboid[i].tab,pgFilePath);
                     #else
-                    sprintf(err3,"表 <%s> 解析失败,对应的数据文件路径为 <%s>\n",taboid[i].tab,pgFilePath);
+                    snprintf(err3, sizeof(err3), "表 <%s> 解析失败,对应的数据文件路径为 <%s>\n",taboid[i].tab,pgFilePath);
                     #endif
                     nErr++;
                     fputs(err3,logErr);
@@ -3212,21 +3209,20 @@ int unloadSCH(char *schemaname){
                 }
 
             }
-            FILE *logSucc = fopen(logPathSucc,"a");
+            FILE *logSucc = pdu_fopen(logPathSucc,"a");
             unloadTimer("end");
             infoUSchSucc(schemaname,tabSize,nNodata,nErr,logPathErr,logPathSucc);
             char succ2[500];
             #ifdef EN
-            sprintf(succ2,"\n\nSchema <%s> %d tables in total。Success: %d, Empty table: %d, Failure: %d \nLog Path\n\t|-Succ Log：%s\n\t|-Fail Log：%s\n",schemaname,tabSize,tabSize-nErr-nNodata,nNodata,nErr,logPathErr,logPathSucc);
+            snprintf(succ2, sizeof(succ2), "\n\nSchema <%s> %d tables in total。Success: %d, Empty table: %d, Failure: %d \nLog Path\n\t|-Succ Log：%s\n\t|-Fail Log：%s\n",schemaname,tabSize,tabSize-nErr-nNodata,nNodata,nErr,logPathErr,logPathSucc);
             #else
-            sprintf(succ2,"\n\n模式<%s>共 %d 张表。成功：%d, 无数据：%d, 失败：%d \n日志路径\n\t|-成功日志：%s\n\t|-失败日志：%s\n",schemaname,tabSize,tabSize-nErr-nNodata,nNodata,nErr,logPathErr,logPathSucc);
+            snprintf(succ2, sizeof(succ2), "\n\n模式<%s>共 %d 张表。成功：%d, 无数据：%d, 失败：%d \n日志路径\n\t|-成功日志：%s\n\t|-失败日志：%s\n",schemaname,tabSize,tabSize-nErr-nNodata,nNodata,nErr,logPathErr,logPathSucc);
             #endif
             fputs(succ2,logSucc);
             fclose(logSucc);
             unloadCOPY(schemaname);
             unloadSCHDDL();
-            strcpy(CUR_SCH,sch2copy);
-            return 1;
+            snprintf(CUR_SCH, 100,  "%s", sch2copy);            return 1;
         }
     }
     return 0;
@@ -3246,33 +3242,31 @@ int unloadDB(char *databasename){
         if(strcmp(databasename,databaseoid[i].database) == 0){
             char CUR_DB_copy[100];
             char CUR_SCH_copy[100];
-            strcpy(CUR_DB_copy,CUR_DB);
-            strcpy(CUR_SCH_copy,CUR_SCH);
+            snprintf(CUR_DB_copy, sizeof(CUR_DB_copy), "%s", CUR_DB);
+            snprintf(CUR_SCH_copy, sizeof(CUR_SCH_copy), "%s", CUR_SCH);
 
-            strcpy(CUR_DB,databasename);
-
+            snprintf(CUR_DB, 100,  "%s", databasename);
             char DBSchemaFile[MiddleAllocSize];
-            sprintf(DBSchemaFile, "%s/%s/%s", CUR_DB, "meta",SCHEMA_BOOT);
+            snprintf(DBSchemaFile, sizeof(DBSchemaFile), "%s/%s/%s", CUR_DB, "meta",SCHEMA_BOOT);
             schoid=bootSCHStruct(DBSchemaFile);
             schemasize=getLineNum(DBSchemaFile);
             for(int j=0;j<schemasize;j++){
                 if(schemaInDefaultSHCS(schoid[j].nspname)){
                     continue;
                 }
-                strcpy(CUR_SCH,schoid[j].nspname);
-                char schPath[100];
-                sprintf(schPath,"%s/%s",CUR_DB,CUR_SCH);
+                snprintf(CUR_SCH, 100,  "%s", schoid[j].nspname);                char schPath[100];
+                snprintf(schPath, sizeof(schPath), "%s/%s",CUR_DB,CUR_SCH);
                 createDir(schPath);
 
                 char logPathSucc[100];
-                sprintf(logPathSucc,"log/%s_%s_%s","unload_db",CUR_DB,"succ.txt");
+                snprintf(logPathSucc, sizeof(logPathSucc), "log/%s_%s_%s","unload_db",CUR_DB,"succ.txt");
                 char logPathErr[100];
-                sprintf(logPathErr,"log/%s_%s_%s","unload_db",CUR_DB,"err.txt");
+                snprintf(logPathErr, sizeof(logPathErr), "log/%s_%s_%s","unload_db",CUR_DB,"err.txt");
                 unlink(logPathSucc);
                 unlink(logPathErr);
 
                 char DBClassFile[MiddleAllocSize];
-                sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
+                snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
                 if(taboid != NULL){
                     free(taboid);
                     taboid=NULL;
@@ -3283,14 +3277,14 @@ int unloadDB(char *databasename){
                 int nNodata=0;
                 for ( i = 0; i < tabSize; i++ ) {
                     char pgFilePath[600]="";
-                    sprintf(pgFilePath, "%s%s%s/%s",CUR_DBDIR,taboid[i].filenode);
+                    snprintf(pgFilePath, sizeof(pgFilePath), "%s%s%s/%s",CUR_DBDIR,taboid[i].filenode);
                     initToastId(taboid[i].toastnode);
                     setlogLevel(readItemLog);
                     int readRet = readItems(&taboid[i],pgFilePath,taboid[i].typ,taboid[i].tab,TABLE_BOOTTYPE,logPathSucc,logPathErr);
                     if (readRet == FAILURE_RET){
                         char err3[1024];
-                        FILE *logErr = fopen(logPathErr,"a");
-                        sprintf(err3,"FAIL PARSING TABLE <%s>,DATAFILE<%s>\n",taboid[i].tab,pgFilePath);
+                        FILE *logErr = pdu_fopen(logPathErr,"a");
+                        snprintf(err3, sizeof(err3), "FAIL PARSING TABLE <%s>,DATAFILE<%s>\n",taboid[i].tab,pgFilePath);
                         nErr++;
                         fputs(err3,logErr);
                         fclose(logErr);
@@ -3299,13 +3293,13 @@ int unloadDB(char *databasename){
                         nNodata++;
                     }
                 }
-                FILE *logSucc = fopen(logPathSucc,"a");
+                FILE *logSucc = pdu_fopen(logPathSucc,"a");
 
                 char succ2[100];
                 #ifdef EN
-                sprintf(succ2,"\n\nSCHEMA <%s> CONTAINS %d TABLES ,SUCCESS NUMBER:%d ,NODATA NUMBER:%d ,FAILED NUMBER: %d  \nLOG DIR:log/%s \n",CUR_SCH,tabSize,tabSize-nErr,nNodata,nErr,logPathErr);
+                snprintf(succ2, sizeof(succ2), "\n\nSCHEMA <%s> CONTAINS %d TABLES ,SUCCESS NUMBER:%d ,NODATA NUMBER:%d ,FAILED NUMBER: %d  \nLOG DIR:log/%s \n",CUR_SCH,tabSize,tabSize-nErr,nNodata,nErr,logPathErr);
                 #else
-                sprintf(succ2,"\n\n模式<%s>共 %d 张表。成功：%d, 无数据：%d, 失败 %d \n日志路径:%s \n",CUR_SCH,tabSize,tabSize-nErr,nNodata,nErr,logPathErr);
+                snprintf(succ2, sizeof(succ2), "\n\n模式<%s>共 %d 张表。成功：%d, 无数据：%d, 失败 %d \n日志路径:%s \n",CUR_SCH,tabSize,tabSize-nErr,nNodata,nErr,logPathErr);
                 #endif
                 printf("%s",succ2);
                 fputs(succ2,logSucc);
@@ -3314,9 +3308,7 @@ int unloadDB(char *databasename){
                 unloadSCHDDL();
 
             }
-            strcpy(CUR_DB,CUR_DB_copy);
-            strcpy(CUR_SCH,CUR_SCH_copy);
-            return 1;
+            snprintf(CUR_DB, 100,  "%s", CUR_DB_copy);            snprintf(CUR_SCH, 100,  "%s", CUR_SCH_copy);            return 1;
         }
     }
     return 0;
@@ -3331,12 +3323,12 @@ int unloadDB(char *databasename){
  */
 void unloadCOPY(char *schemaname){
     char COPY[100]="";
-    sprintf(COPY,"%s/COPY",CUR_DB);
+    snprintf(COPY, sizeof(COPY), "%s/COPY",CUR_DB);
     createDir(COPY);
 
     char copyFilename[150];
     memset(copyFilename,0,100);
-    sprintf(copyFilename,"%s/%s_copy.sql",COPY,schemaname);
+    snprintf(copyFilename, sizeof(copyFilename), "%s/%s_copy.sql",COPY,schemaname);
     FILE *copyfp = fopen(copyFilename,"w");
 
     if(copyfp == NULL){
@@ -3345,11 +3337,11 @@ void unloadCOPY(char *schemaname){
     }
 
     char setSch[100]="";
-    sprintf(setSch,"set search_path to %s;\n",schemaname);
+    snprintf(setSch, sizeof(setSch), "set search_path to %s;\n",schemaname);
     fputs(setSch,copyfp);
 
     char csvpath[100];
-    sprintf(csvpath,"%s/%s",CUR_DB,schemaname);
+    snprintf(csvpath, sizeof(csvpath), "%s/%s",CUR_DB,schemaname);
 
     int PATHSIZE=1024;
     char currPath[PATHSIZE];
@@ -3369,7 +3361,7 @@ void unloadCOPY(char *schemaname){
             }
         }
     }
-    sprintf(fullPath,"%s/%s/*",currPath,csvpath);
+    snprintf(fullPath, sizeof(fullPath), "%s/%s/*",currPath,csvpath);
     WIN32_FIND_DATA findFileData;
     HANDLE hFind = FindFirstFile(fullPath, &findFileData);
 
@@ -3392,7 +3384,7 @@ void unloadCOPY(char *schemaname){
     memset(path,0,1024);
     ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
     get_parent_directory(path);
-    sprintf(fullPath,"%s/%s",path,csvpath);
+    snprintf(fullPath, sizeof(fullPath), "%s/%s",path,csvpath);
     DIR *dir1;
     struct dirent *entry1;
     int arraySize=0;
@@ -3426,8 +3418,7 @@ void unloadCOPY(char *schemaname){
             tabName[len] = '\0';
         }
         char *tabNameProcessed = quotedIfUpper(tabName);
-        sprintf(str2write,"COPY %s FROM '%s/%s';\n",tabNameProcessed,fullPath,filenames[i]);
-        fputs(str2write,copyfp);
+        snprintf(str2write, 1024,  "COPY %s FROM '%s/%s';\n",tabNameProcessed,fullPath,filenames[i]);        fputs(str2write,copyfp);
     }
 
     fclose(copyfp);
@@ -3442,11 +3433,11 @@ void unloadCOPY(char *schemaname){
 void unloadSCHDDL()
 {
     char SCHDDL[100]="";
-    sprintf(SCHDDL,"%s/DDL",CUR_DB);
+    snprintf(SCHDDL, sizeof(SCHDDL), "%s/DDL",CUR_DB);
     createDir(SCHDDL);
 
     char ddlFilename[200]="";
-    sprintf(ddlFilename,"%s/%s_ddl.sql",SCHDDL,CUR_SCH);
+    snprintf(ddlFilename, sizeof(ddlFilename), "%s/%s_ddl.sql",SCHDDL,CUR_SCH);
     FILE *ddl = fopen(ddlFilename,"w");
 
     if(ddl == NULL){
@@ -3455,28 +3446,28 @@ void unloadSCHDDL()
     }
 
     char msg_setpath[100]="";
-    sprintf(msg_setpath,"CREATE SCHEMA %s;\nset search_path to %s;\n",CUR_SCH,CUR_SCH);
+    snprintf(msg_setpath, sizeof(msg_setpath), "CREATE SCHEMA %s;\nset search_path to %s;\n",CUR_SCH,CUR_SCH);
     fputs(msg_setpath,ddl);
 
     int i;
     for ( i = 0; i < tabSize; i++ ) {
         char msg_begin[200]="";
         char *ddltabname = quotedIfUpper(taboid[i].tab);
-        sprintf(msg_begin,"CREATE TABLE %s(\n",ddltabname);
+        snprintf(msg_begin, sizeof(msg_begin), "CREATE TABLE %s(\n",ddltabname);
 
         fputs(msg_begin,ddl);
 
         char attr[10240]="";
-        strcpy(attr,taboid[i].attr);
+        snprintf(attr, sizeof(attr), "%s", taboid[i].attr);
         char typ[10240]="";
-        strcpy(typ,taboid[i].typ);
+        snprintf(typ, sizeof(typ), "%s", taboid[i].typ);
         char attmod[10240]="";
-        strcpy(attmod,taboid[i].attmod);
+        snprintf(attmod, sizeof(attmod), "%s", taboid[i].attmod);
 
         ata2DDL(attr,typ,attmod,ddl);
 
         char msg_end[200]="";
-        sprintf(msg_end,");\n\n");
+        snprintf(msg_end, sizeof(msg_end), ");\n\n");
         fputs(msg_end,ddl);
     }
     infoUddlSucc(ddlFilename,tabSize);
@@ -3591,9 +3582,7 @@ int getInit(){
 
     CUR_SCH = malloc(100);
     CUR_DB = malloc(100);
-    strcpy(CUR_SCH,"public");
-    strcpy(CUR_DB,"PDU");
-    SrtTime=(TimestampTz*)malloc(sizeof(TimestampTz));
+    snprintf(CUR_SCH, 100, "%s", "public");    snprintf(CUR_DB, 100, "%s", "PDU");    SrtTime=(TimestampTz*)malloc(sizeof(TimestampTz));
     EndTime=(TimestampTz*)malloc(sizeof(TimestampTz));
     *SrtTime=0;
     *EndTime=0;
@@ -3602,7 +3591,7 @@ int getInit(){
     setExportMode_there(CSVform);
     cprDeclaration();
     char dfcmd[MAXPGPATH]={0};
-    sprintf(dfcmd,"df -h %s | awk 'NR>1 {print $1}'",initDBPath);
+    snprintf(dfcmd, sizeof(dfcmd), "df -h %s | awk 'NR>1 {print $1}'",initDBPath);
     char *retdev = execCMD(dfcmd);
     if(strcmp(retdev,diskPath) != 0 && strlen(diskPath) > 0){
         #ifdef CN
@@ -3611,6 +3600,8 @@ int getInit(){
         printf("%sWarning: The disk where PGDATA resides is inconsistent with the disk set by DISK_PATH. Valid blocks cannot be properly excluded when executing 'ds idx'\n%s",COLOR_WARNING,C_RESET);
         #endif
     }
+    free(retdev);
+    retdev=NULL;
     return 1;
 }
 
@@ -3706,7 +3697,7 @@ int getToastHash(FILE *fp,unsigned int blockSize,FILE *destfp,int hundred)
 
                     if(toastOid > 0 && chunkId >= 0)
                     {
-                        sprintf(destInfo,"%d\t%d\t%d\t%d\t%d\n",toastOid,chunkId,currentBlockNo,itemOffset,hundred);
+                        snprintf(destInfo, sizeof(destInfo), "%d\t%d\t%d\t%d\t%d\n",toastOid,chunkId,currentBlockNo,itemOffset,hundred);
                         fputs(destInfo,destfp);
                     }
                     toastIsEmpty=0;
@@ -3766,7 +3757,7 @@ int ToastChunkforOid(const char *tuple_data,unsigned int tuple_size,uint32 *chun
 int initToastHash(char *CUR_DB,char *toastnode)
 {
     char metaToastPath[100];
-    sprintf(metaToastPath,"%s/toastmeta/%s",CUR_DB,toastnode);
+    snprintf(metaToastPath, sizeof(metaToastPath), "%s/toastmeta/%s",CUR_DB,toastnode);
     int numLines = 0;
     FILE *file = fileGetLines(metaToastPath,&numLines);
     toastHash = NULL;
@@ -3814,8 +3805,8 @@ void INFO(char *latter){
             if( strcmp( taboid[i].tab,latter) == 0 ){
                 char fulltabpath[MAXPGPATH]={0};
                 char fulltoastpath[MAXPGPATH]={0};
-                sprintf(fulltabpath,"%s/%s",CUR_DBDIR,taboid[i].filenode);
-                sprintf(fulltoastpath,"%s/%s",CUR_DBDIR,taboid[i].toastnode);
+                snprintf(fulltabpath, sizeof(fulltabpath), "%s/%s",CUR_DBDIR,taboid[i].filenode);
+                snprintf(fulltoastpath, sizeof(fulltoastpath), "%s/%s",CUR_DBDIR,taboid[i].toastnode);
                 print_file_blocks(fulltabpath,fulltoastpath);
                 tabMatched = 1;
             }
@@ -3866,11 +3857,10 @@ void META(char *type,char *objname){
             if( strcmp(objname,schoid[j].nspname) == 0 ){
                 matched = 1;
                 char sch2copy[100];
-                strcpy(sch2copy,CUR_SCH);
-                strcpy(CUR_SCH,objname);
-
+                snprintf(sch2copy, sizeof(sch2copy), "%s", CUR_SCH);
+                snprintf(CUR_SCH, 100,  "%s", objname);
                 char DBClassFile[MiddleAllocSize];
-                sprintf(DBClassFile, "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
+                snprintf(DBClassFile, sizeof(DBClassFile), "%s/%s/%s_%s", CUR_DB,"meta",CUR_SCH, TABLE_BOOT);
                 if(taboid != NULL){
                     free(taboid);
                     taboid=NULL;
@@ -3881,11 +3871,9 @@ void META(char *type,char *objname){
                 {
                     TABstruct elem = taboid[j];
                     char *str = (char*)malloc(20+strlen(elem.tab)+strlen(elem.typ));
-                    sprintf(str,"%s %s\n",elem.tab,elem.typ);
-                    fputs(str,fp);
+                    snprintf(str, 20, "%s %s\n",elem.tab,elem.typ);                    fputs(str,fp);
                 }
-                strcpy(CUR_SCH,sch2copy);
-            }
+                snprintf(CUR_SCH, 100,  "%s", sch2copy);            }
         }
 
         cnt = tabSize;
@@ -3900,8 +3888,7 @@ void META(char *type,char *objname){
                 TABstruct elem = taboid[j];
                 if(strcmp(elem.tab,tab) == 0){
                     char *str = (char*)malloc(20+strlen(elem.tab)+strlen(elem.typ));
-                    sprintf(str,"%s %s",elem.tab,elem.typ);
-                    printf("%s%s%s\n",COLOR_UNLOAD,str,C_RESET);
+                    snprintf(str, 20, "%s %s",elem.tab,elem.typ);                    printf("%s%s%s\n",COLOR_UNLOAD,str,C_RESET);
                     fputs(str,fp);
                     matched = 1;
                     break;
@@ -3939,8 +3926,13 @@ void CHECKWAL()
     int WalSegSz;
     int r;
     cleanDir("restore/ckwal");
-    WALFILE *walDirFiles_array = (WALFILE*)malloc(sizeof(WALFILE)*2048);
-    WALFILE *archDirFiles_array = (WALFILE*)malloc(sizeof(WALFILE)*2048);
+    WALFILE *walDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
+    WALFILE *archDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
+    if (walDirFiles_array == NULL || archDirFiles_array == NULL) {
+        free(walDirFiles_array);
+        free(archDirFiles_array);
+        return;
+    }
     XLogLongPageHeader longhdr = NULL;
     XLogDumpPrivate private;
 	memset(&private, 0, sizeof(XLogDumpPrivate));
@@ -3975,8 +3967,8 @@ void CHECKWAL()
             isMess = 1;
         }
         if(isMess){
-            sprintf(waldir,"restore/ckwal");
-            sprintf(destPath,"%s/%s",waldir,ptrfName);
+            snprintf(waldir, sizeof(waldir), "restore/ckwal");
+            snprintf(destPath, sizeof(destPath), "%s/%s",waldir,ptrfName);
             int ret = copyFile(fpath,destPath);
             if(ret == EXIT_FAILURE){
                 return;
@@ -3984,8 +3976,8 @@ void CHECKWAL()
             printf("%s%s -> %s%s\n",C_PURPLE2,archDirFiles_array[j].walnames,ptrfName,C_RESET);
         }
         else{
-            sprintf(waldir,"restore/ckwal");
-            sprintf(destPath,"%s/%s",waldir,archDirFiles_array[j].walnames);
+            snprintf(waldir, sizeof(waldir), "restore/ckwal");
+            snprintf(destPath, sizeof(destPath), "%s/%s",waldir,archDirFiles_array[j].walnames);
             int ret = copyFile(fpath,destPath);
             if(ret == EXIT_FAILURE){
                 return;
@@ -4010,7 +4002,7 @@ void CHECKWAL()
 void setSrtWalname(char *third)
 {
     if(IsXLogFileName(third)){
-        strcpy(manualSrtWal,third);
+        snprintf(manualSrtWal, sizeof(manualSrtWal), "%s", third);
         SHOW_PARAM();
     }
     else{
@@ -4021,7 +4013,7 @@ void setSrtWalname(char *third)
 void setEndWalname(char *third)
 {
     if(IsXLogFileName(third)){
-        strcpy(manualEndWal,third);
+        snprintf(manualEndWal, sizeof(manualEndWal), "%s", third);
         SHOW_PARAM();
     }
     else{
@@ -4102,7 +4094,7 @@ void setTime(char *third,char *fourth,int flag){
     }
 
     char time[100];
-    sprintf(time,"%s %s",third,fourth);
+    snprintf(time, sizeof(time), "%s %s",third,fourth);
     if(flag == 0){
         *SrtTime=str_to_timestamptz_og(time);
         if(*SrtTime == -1){
@@ -4225,9 +4217,9 @@ void setRestype(char *third){
         setResTyp_decode(UPDATEtyp);
         memset(resStr,0,10);
         #ifdef CN
-        sprintf(resStr,"%s","更新");
+        snprintf(resStr, sizeof(resStr), "%s","更新");
         #else
-        sprintf(resStr,"%s","updated");
+        snprintf(resStr, sizeof(resStr), "%s","updated");
         #endif
     }
     else if (strcmp(third,"delete") == 0){
@@ -4236,9 +4228,9 @@ void setRestype(char *third){
         setResTyp_decode(DELETEtyp);
         memset(resStr,0,10);
         #ifdef CN
-        sprintf(resStr,"%s","删除");
+        snprintf(resStr, sizeof(resStr), "%s","删除");
         #else
-        sprintf(resStr,"%s","deleted");
+        snprintf(resStr, sizeof(resStr), "%s","deleted");
         #endif
     }
     else{
@@ -4260,9 +4252,9 @@ void setRestypeNoShow(char *third)
         setResTyp_decode(UPDATEtyp);
         memset(resStr,0,10);
         #ifdef CN
-        sprintf(resStr,"%s","更新");
+        snprintf(resStr, sizeof(resStr), "%s","更新");
         #else
-        sprintf(resStr,"%s","updated");
+        snprintf(resStr, sizeof(resStr), "%s","updated");
         #endif
     }
     else if (strcmp(third,"delete") == 0){
@@ -4271,9 +4263,9 @@ void setRestypeNoShow(char *third)
         setResTyp_decode(DELETEtyp);
         memset(resStr,0,10);
         #ifdef CN
-        sprintf(resStr,"%s","删除");
+        snprintf(resStr, sizeof(resStr), "%s","删除");
         #else
-        sprintf(resStr,"%s","deleted");
+        snprintf(resStr, sizeof(resStr), "%s","deleted");
         #endif
     }
     else{
@@ -4293,8 +4285,8 @@ void SHOW_PARAM()
     char walret1[60];
     char walret2[60];
 
-    sprintf(walret1,"   %s",manualSrtWal);
-    sprintf(walret2,"   %s",manualEndWal);
+    snprintf(walret1, sizeof(walret1), "   %s",manualSrtWal);
+    snprintf(walret2, sizeof(walret2), "   %s",manualEndWal);
     printfParam("startwal",walret1);
     printfParam("endwal",walret2);
 
@@ -4334,15 +4326,15 @@ void SHOW_PARAM()
     printf("%s\t  ----------------------DropScan----------------------%s\n",COLOR_helpRestore,C_RESET);
 
     char dsoffstr[50]={0};
-    sprintf(dsoffstr,"              %lld",dropScanSrtOff);
+    snprintf(dsoffstr, sizeof(dsoffstr), "              %lld",dropScanSrtOff);
     printfParam("dsoff(DropScan startOffset)",dsoffstr);
 
     char blkintvalStr[10]={0};
-    sprintf(blkintvalStr,"                        %d",blkInterval);
+    snprintf(blkintvalStr, sizeof(blkintvalStr), "                        %d",blkInterval);
     printfParam("blkiter(Block Intervals)",dsoffstr);
 
     char itmsPerCsvStr[10]={0};
-    sprintf(itmsPerCsvStr,"              %d",itemspercsv);
+    snprintf(itmsPerCsvStr, sizeof(itmsPerCsvStr), "              %d",itemspercsv);
     printfParam("itmpcsv(Items Per Csv)",itmsPerCsvStr);
     char *isoModeStr= isoMode ? "              on":"              off";
     printfParam("isomode",isoModeStr);
@@ -4410,8 +4402,8 @@ void SET_PARAM(char *former,char *latter,char *third,char *fourth)
 
 void RESET_ALL(){
 
-    strcpy(manualSrtWal,"");
-    strcpy(manualEndWal,"");
+    snprintf(manualSrtWal, sizeof(manualSrtWal), "%s", "");
+    snprintf(manualEndWal, sizeof(manualEndWal), "%s", "");
 
     restoreMode=periodRestore;
     setRestoreMode_there(periodRestore);
@@ -4431,9 +4423,9 @@ void RESET_ALL(){
     setResTyp_decode(DELETEtyp);
     memset(resStr,0,10);
     #ifdef CN
-    sprintf(resStr,"%s","删除");
+    snprintf(resStr, sizeof(resStr), "%s","删除");
     #else
-    sprintf(resStr,"%s","deleted");
+    snprintf(resStr, sizeof(resStr), "%s","deleted");
     #endif
     dropScanSrtOff = 0;
     isoMode = 0;
@@ -4460,10 +4452,10 @@ void RESET_PARAM(char *former,char *latter,char *third)
         switch (paramTyp)
         {
         case 0:
-            strcpy(manualSrtWal,"");
+            snprintf(manualSrtWal, sizeof(manualSrtWal), "%s", "");
             break;
         case 1:
-            strcpy(manualEndWal,"");
+            snprintf(manualEndWal, sizeof(manualEndWal), "%s", "");
             break;
         case 2:
             restoreMode=periodRestore;
@@ -4490,9 +4482,9 @@ void RESET_PARAM(char *former,char *latter,char *third)
             setResTyp_decode(DELETEtyp);
             memset(resStr,0,10);
             #ifdef CN
-            sprintf(resStr,"%s","删除");
+            snprintf(resStr, sizeof(resStr), "%s","删除");
             #else
-            sprintf(resStr,"%s","deleted");
+            snprintf(resStr, sizeof(resStr), "%s","deleted");
             #endif
         case 10:
             dropScanSrtOff = 0;

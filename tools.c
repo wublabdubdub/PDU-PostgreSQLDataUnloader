@@ -127,7 +127,7 @@ char *getVersionNum(char initDBPath[1024])
     char *version = NULL;
     char buffer[15];
     char versionfilepath[1050];
-    sprintf(versionfilepath,"%s%s",initDBPath,"PG_VERSION");
+    snprintf(versionfilepath, sizeof(versionfilepath), "%s%s",initDBPath,"PG_VERSION");
     file = fopen(versionfilepath, "r");
     if (file == NULL) {
         perror("Failed to openFile");
@@ -135,7 +135,7 @@ char *getVersionNum(char initDBPath[1024])
     }
 
     if (fgets(buffer, 15, file) != NULL) {
-        version = strdup(buffer);
+        version = pdu_strdup(buffer);
         if (version == NULL) {
             perror("Memory allocation failed");
             fclose(file);
@@ -193,12 +193,10 @@ void getStdTyp(char *str,char *ret)
     int i;
     for ( i=0;i<size;i++ ){
         if ( strcmp(typmap_table[i].oriTyp,str) == 0 ){
-            strcpy(ret, typmap_table[i].stdTyp);
-            return;
+            snprintf(ret, 10240,  "%s", typmap_table[i].stdTyp);            return;
         }
     }
-    strcpy(ret, str);
-}
+    snprintf(ret, 10240,  "%s", str);}
 
 /**
  * createDir - Create directory if not exists
@@ -323,9 +321,9 @@ void getAttrTypForm(char attr[10240],char typ[10240],char attmod[10240])
                 char a[10]="";
                 char b[10]="";
                 char *token=strtok(modArr[x],".");
-                strcpy(a,token);
+                snprintf(a, sizeof(a), "%s", token);
                 token=strtok(NULL,".");
-                strcpy(b,token);
+                snprintf(b, sizeof(b), "%s", token);
                 if(x != i-1){
                     printf("\t%-25s%s%s,%s,\n",ddlcolname,typArr[x],a,b);
                 }
@@ -369,11 +367,11 @@ void getAttrTypSimple(char res[10240],char typ[10240])
     }
 
     for(int x=0;x<j;x++){
+        size_t remain = 10240 - strlen(res) - 1;
+        strncat(res, typArr[x], remain);
         if(x != j-1){
-            sprintf(res,"%s%s,",res,typArr[x]);
-        }
-        else{
-            sprintf(res,"%s%s",res,typArr[x]);
+            remain = 10240 - strlen(res) - 1;
+            strncat(res, ",", remain);
         }
     }
 }
@@ -420,10 +418,10 @@ void ata2DDL(char attr[10240],char typ[10240],char attmod[10240],FILE *ddl)
             char *ddlcolname = quotedIfUpper(attrArr[x]);
             if(strcmp(modArr[x],"()") == 0){
                 if(x == i-1){
-                    sprintf(tmp,"\t%s %s\n",ddlcolname,typArr[x]);
+                    snprintf(tmp, sizeof(tmp), "\t%s %s\n",ddlcolname,typArr[x]);
                 }
                 else{
-                    sprintf(tmp,"\t%s %s,\n",ddlcolname,typArr[x]);
+                    snprintf(tmp, sizeof(tmp), "\t%s %s,\n",ddlcolname,typArr[x]);
                 }
             }
             else{
@@ -431,35 +429,35 @@ void ata2DDL(char attr[10240],char typ[10240],char attmod[10240],FILE *ddl)
                     char a[10]="";
                     char b[10]="";
                     char *token=strtok(modArr[x],".");
-                    strcpy(a,token);
+                    snprintf(a, sizeof(a), "%s", token);
                     while (token != NULL){
                         token=strtok(NULL,".");
                         if(token != NULL){
-                            strcpy(b,token);
+                            snprintf(b, sizeof(b), "%s", token);
                         }
                     }
                     if(x == i-1){
-                        sprintf(tmp,"\t%s %s%s,%s\n",ddlcolname,typArr[x],a,b);
+                        snprintf(tmp, sizeof(tmp), "\t%s %s%s,%s\n",ddlcolname,typArr[x],a,b);
                     }
                     else{
-                        sprintf(tmp,"\t%s %s%s,%s,\n",ddlcolname,typArr[x],a,b);
+                        snprintf(tmp, sizeof(tmp), "\t%s %s%s,%s,\n",ddlcolname,typArr[x],a,b);
                     }
                 }
 
                 else if (strcmp(typArr[x],"varchar") == 0 || strcmp(typArr[x],"_varchar") == 0 ){
                     if(x == i-1){
-                        sprintf(tmp,"\t%s %s\n",ddlcolname,typArr[x]);
+                        snprintf(tmp, sizeof(tmp), "\t%s %s\n",ddlcolname,typArr[x]);
                     }
                     else{
-                        sprintf(tmp,"\t%s %s,\n",ddlcolname,typArr[x]);
+                        snprintf(tmp, sizeof(tmp), "\t%s %s,\n",ddlcolname,typArr[x]);
                     }
                 }
                 else{
                    if(x == i-1){
-                        sprintf(tmp,"\t%s %s%s\n",ddlcolname,typArr[x],modArr[x]);
+                        snprintf(tmp, sizeof(tmp), "\t%s %s%s\n",ddlcolname,typArr[x],modArr[x]);
                     }
                     else{
-                        sprintf(tmp,"\t%s %s%s,\n",ddlcolname,typArr[x],modArr[x]);
+                        snprintf(tmp, sizeof(tmp), "\t%s %s%s,\n",ddlcolname,typArr[x],modArr[x]);
                     }
                 }
             }
@@ -490,10 +488,10 @@ void commaStrWriteIntoFileDB(char *str,FILE *file)
     char *token=strtok(str, "\t");
     while (token != NULL){
         char tmpstr2[100]="";
-        strcpy(tmpstr2,token);
+        snprintf(tmpstr2, sizeof(tmpstr2), "%s", token);
         removeSpaces(tmpstr2);
         if (colcount == oidnum){
-            sprintf(tmpstr1, "%s%s", tmpstr2, "\t");
+            snprintf(tmpstr1, sizeof(tmpstr1), "%s%s", tmpstr2, "\t");
         }
         else if (colcount == datnamenum){
 			strcat(tmpstr1,tmpstr2);
@@ -514,11 +512,11 @@ void commaStrWriteIntoFileSCH_TYP(char *str,FILE *file)
     char tmpstr[MiddleAllocSize];
     char *token=strtok(str, "\t");
 
-    sprintf(tmpstr, "%s%s", token, "\t");
+    snprintf(tmpstr, sizeof(tmpstr), "%s%s", token, "\t");
     fputs(tmpstr, file);
 
     token = strtok(NULL, ",");
-    sprintf(tmpstr, "%s", token);
+    snprintf(tmpstr, sizeof(tmpstr), "%s", token);
     fputs(tmpstr, file);
 
     fputs("\n", file);
@@ -530,22 +528,22 @@ void AttrXman2AttrStrcut(char *src,ATTRstruct *oneattr)
     char *token=strtok(src, "\t");
     while (token != NULL){
         char tmpstr2[MiddleAllocSize]="";
-        strcpy(tmpstr2,token);
+        snprintf(tmpstr2, sizeof(tmpstr2), "%s", token);
         removeSpaces(tmpstr2);
         if (colcount == 1)
         {
-            strcpy(oneattr->relid,tmpstr2);
+            snprintf(oneattr->relid, sizeof(oneattr->relid), "%s", tmpstr2);
         }
 
         else if (colcount == 2){
-            strcpy(oneattr->attr,tmpstr2);
+            snprintf(oneattr->attr, sizeof(oneattr->attr), "%s", tmpstr2);
         }
 
         else if (colcount == 3){
-            strcpy(oneattr->typid,tmpstr2);
+            snprintf(oneattr->typid, sizeof(oneattr->typid), "%s", tmpstr2);
         }
         else if (colcount == 6){
-            strcpy(oneattr->attrnum,tmpstr2);
+            snprintf(oneattr->attrnum, sizeof(oneattr->attrnum), "%s", tmpstr2);
             return;
         }
         colcount++;
@@ -565,8 +563,16 @@ void OutputGBKString(const char *gbk_str, FILE *file) {
     }
 
     size_t in_len = strlen(gbk_str);
+    if (in_len > SIZE_MAX / 4) {
+        iconv_close(cd);
+        return;
+    }
     size_t out_len = in_len * 4;
-    char *out_buf = malloc(out_len);
+    char *out_buf = pdu_malloc(out_len + 1);
+    if (out_buf == NULL) {
+        iconv_close(cd);
+        return;
+    }
     char *in_ptr = (char*)gbk_str;
     char *out_ptr = out_buf;
 
@@ -613,7 +619,7 @@ void genCopy(char *csvpath,FILE *copyfp){
             }
         }
     }
-    sprintf(fullPath,"%s/%s/*",currPath,csvpath);
+    snprintf(fullPath, sizeof(fullPath), "%s/%s/*",currPath,csvpath);
     WIN32_FIND_DATA findFileData;
     HANDLE hFind = FindFirstFile(fullPath, &findFileData);
 
@@ -634,7 +640,7 @@ void genCopy(char *csvpath,FILE *copyfp){
 #elif defined(__linux__)
     char path[10240];
     ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
-    sprintf(fullPath,"%s/%s",path,csvpath);
+    snprintf(fullPath, sizeof(fullPath), "%s/%s",path,csvpath);
     DIR *dir1;
     struct dirent *entry1;
     int arraySize=0;
@@ -661,8 +667,7 @@ void genCopy(char *csvpath,FILE *copyfp){
             strncpy(tabName, filenames[i], len);
             tabName[len] = '\0';
         }
-        sprintf(str2write,"COPY %s FROM '%s%s';\n",tabName,fullPath,filenames[i]);
-        fputs(str2write,copyfp);
+        snprintf(str2write, 1024,  "COPY %s FROM '%s%s';\n",tabName,fullPath,filenames[i]);        fputs(str2write,copyfp);
     }
 }
 
@@ -671,14 +676,13 @@ void addQuotesToString(char *str)
     int len = strlen(str);
     int i;
 
-    char *newStr = malloc(len + 3);
+    char *newStr = pdu_malloc(len + 3);
     if (newStr != NULL) {
         newStr[0] = '\'';
         strncpy(newStr + 1, str, len);
         newStr[len + 1] = '\'';
         newStr[len + 2] = '\0';
-        strcpy(str, newStr);
-        free(newStr);
+        snprintf(str, 10240,  "%s", newStr);        free(newStr);
     } else {
         printf("Memory allocation FAIL\n");
     }
@@ -704,7 +708,7 @@ int get_mac_address(char *mac_str) {
         if (family == AF_PACKET && strcmp(ifa->ifa_name, "lo") != 0) {
             struct sockaddr_ll *sll = (struct sockaddr_ll *)ifa->ifa_addr;
             if (sll->sll_halen == 6) {
-                sprintf(mac_str, "%02x:%02x:%02x:%02x:%02x:%02x",
+                snprintf(mac_str, 18, "%02x:%02x:%02x:%02x:%02x:%02x",
                         sll->sll_addr[0], sll->sll_addr[1], sll->sll_addr[2],
                         sll->sll_addr[3], sll->sll_addr[4], sll->sll_addr[5]);
                 freeifaddrs(ifaddr);
@@ -738,8 +742,7 @@ int get_ip_address(char *ip_str) {
 
             if (inet_ntop(AF_INET, &sai->sin_addr, ip, sizeof(ip))) {
                 if (strcmp(ip, "0.0.0.0") != 0) {
-                    sprintf(ip_str,"%s-%s-%s-",ip,ip,ip);
-                    found = 1;
+                    snprintf(ip_str, 100,  "%s-%s-%s-",ip,ip,ip);                    found = 1;
                     break;
                 }
             } else {
@@ -861,10 +864,11 @@ void harray_append(harray* harray, int flag, void *elem, uint64 val)
         harray_expand(harray, flag,harray->allocated * 2);
 
     char valStr[1000];
-    sprintf(valStr,"%lld",val);
+    snprintf(valStr, sizeof(valStr), "%lld", (long long)val);
 
     unsigned int index = hash(harray,valStr,harray->allocated);
-    Node* newNode = (Node*)malloc(sizeof(Node));
+    Node* newNode = (Node*)pdu_malloc(sizeof(Node));
+    if (newNode == NULL) return;
 
     if ( flag == HARRAYATTR ){
         newNode->data = (ATTRstruct *)elem;
@@ -876,12 +880,14 @@ void harray_append(harray* harray, int flag, void *elem, uint64 val)
         newNode->data = (TABstruct *)elem;
     }
     else if ( flag == HARRAYINT){
-        uint32 *copy = malloc(sizeof(uint32));
+        uint32 *copy = pdu_malloc(sizeof(uint32));
+        if (copy == NULL) { free(newNode); return; }
         *copy = val;
         newNode->data = copy;
     }
     else if ( flag == HARRAYLLINT){
-        uint64 *copy = malloc(sizeof(uint64));
+        uint64 *copy = pdu_malloc(sizeof(uint64));
+        if (copy == NULL) { free(newNode); return; }
         *copy = val;
         newNode->data = copy;
     }
@@ -915,25 +921,25 @@ void harray_expand(harray *array,int flag, size_t newsize) {
             else if( flag == HARRAYTOAST){
                 chunkInfo *a = (chunkInfo*)current->data;
                 char val2pass[1000];
-                sprintf(val2pass,"%d",a->toid);
+                snprintf(val2pass, sizeof(val2pass), "%d",a->toid);
                 new_index = hash(array, val2pass,newsize);
             }
             else if ( flag == HARRAYINT){
                 uint32 *a = (uint32 *)current->data;
                 char val2pass[100]={0};
-                sprintf(val2pass, "%" PRIu32, *a);
+                snprintf(val2pass, sizeof(val2pass), "%" PRIu32, *a);
                 new_index = hash(array, val2pass,newsize);
             }
             else if ( flag == HARRAYLLINT){
                 uint64 *a = (uint64 *)current->data;
                 char val2pass[100]={0};
-                sprintf(val2pass, "%" PRIu64, *a);
+                snprintf(val2pass, sizeof(val2pass), "%" PRIu64, *a);
                 new_index = hash(array, val2pass,newsize);
             }
             else if ( flag == HARRAYDEL){
                 DELstruct *a = (DELstruct*)current->data;
                 char val2pass[1000];
-                sprintf(val2pass,"%d",a->tx);
+                snprintf(val2pass, sizeof(val2pass), "%d",a->tx);
                 new_index = hash(array, val2pass,newsize);
             }
             else if( flag == HARRAYTAB ){
@@ -955,7 +961,7 @@ void harray_expand(harray *array,int flag, size_t newsize) {
 int harray_search(harray* harray, int flag , uint64 val)
 {
     char valStr[1000];
-    sprintf(valStr,"%lld",val);
+    snprintf(valStr, sizeof(valStr), "%lld",val);
     unsigned int index = hash(harray, valStr,harray->allocated);
     Node* node = harray->table[index];
     int found=0;
@@ -1003,7 +1009,7 @@ int harray_search(harray* harray, int flag , uint64 val)
 void *harray_get(harray* harray, int flag , uint32 val)
 {
     char valStr[1000];
-    sprintf(valStr,"%lld",val);
+    snprintf(valStr, sizeof(valStr), "%lld",val);
     unsigned int index = hash(harray, valStr,harray->allocated);
     Node* node = harray->table[index];
     int found=0;
@@ -1051,7 +1057,10 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
     int g=0;
     for( g=0 ; g < tabSize ; g++ ){
         int attrAppendCount=0;
-        tempArray=malloc(10240 * sizeof(ATTRstruct));
+        tempArray=pdu_malloc(10240 * sizeof(ATTRstruct));
+        if (tempArray == NULL) {
+            return;
+        }
         char *relid = taboidTMP[g].oid;
 
         unsigned int index = hash(attr_harray, relid, attr_harray->allocated);
@@ -1077,7 +1086,7 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
                         isdrop =1;
                     if(isdrop){
                         memset(tempArray[x].attr,0,50);
-                        sprintf(tempArray[x].attr,"dropped");
+                        snprintf(tempArray[x].attr, sizeof(tempArray[x].attr), "dropped");
                     }
 
                     if(x == attrAppendCount -1){
@@ -1103,12 +1112,12 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
 
                     }
                     else{
-                        sprintf(attrStr, "%s%s",tempArray[x].attr,",");
-                        sprintf(typStr, "%s%s",tempArray[x].typid,",");
+                        snprintf(attrStr, sizeof(attrStr), "%s%s",tempArray[x].attr,",");
+                        snprintf(typStr, sizeof(typStr), "%s%s",tempArray[x].typid,",");
                         if(!isdrop)
-                            sprintf(modStr, "%s%s",tempArray[x].attrmod,",");
-                        sprintf(lenStr, "%s%s",tempArray[x].attlen,",");
-                        sprintf(alignStr, "%s%s",tempArray[x].attalign,",");
+                            snprintf(modStr, sizeof(modStr), "%s%s",tempArray[x].attrmod,",");
+                        snprintf(lenStr, sizeof(lenStr), "%s%s",tempArray[x].attlen,",");
+                        snprintf(alignStr, sizeof(alignStr), "%s%s",tempArray[x].attalign,",");
                     }
 
                 }
@@ -1127,39 +1136,46 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
                     for ( x = 0; x < typoidlen; x++ ){
                         if ( strcmp(typStrArray[y],typoid[x].oid ) == 0 ){
                             char *typnameret=NULL;
-                            typnameret=(char *)malloc(sizeof(typoid[x].typname));
-                            strcpy(typnameret,typoid[x].typname);
-                            if( y == a-1 ){
-                                sprintf(attrTyp, "%s%s",attrTyp,typnameret);
-                                free(typnameret);
+                            typnameret=(char *)pdu_malloc(sizeof(typoid[x].typname));
+                            if (typnameret == NULL) {
                                 break;
+                            }
+                            snprintf(typnameret, 100,  "%s", typoid[x].typname);
+                            if( y == a-1 ){
+                                strncat(attrTyp, typnameret, sizeof(attrTyp) - strlen(attrTyp) - 1);
                             }
                             else if ( y == 0 ){
-                                sprintf(attrTyp, "%s%s",typnameret,",");
-                                free(typnameret);
-                                break;
+                                snprintf(attrTyp, sizeof(attrTyp), "%s,",typnameret);
                             }
                             else{
-                                sprintf(attrTyp, "%s%s%s",attrTyp,typnameret,",");
-                                free(typnameret);
-                                break;
+                                strncat(attrTyp, typnameret, sizeof(attrTyp) - strlen(attrTyp) - 1);
+                                strncat(attrTyp, ",", sizeof(attrTyp) - strlen(attrTyp) - 1);
                             }
+                            free(typnameret);
+                            typnameret = NULL;
+                            break;
                         }
                     }
                 }
                 char *lenStrProced =NULL;
-                lenStrProced = (char *)malloc(sizeof(char) * 65536);
+                lenStrProced = (char *)pdu_malloc(sizeof(char) * 65536);
+                if (lenStrProced == NULL) {
+                    free(tempArray);
+                    return;
+                }
                 memset(lenStrProced,0,65536);
                 processAttMod(attrTyp,modStr,lenStrProced);
-                strcpy(taboidTMP[g].attr,attrStr);
-                strcpy(taboidTMP[g].typ,attrTyp);
-                strcpy(taboidTMP[g].attmod,lenStrProced);
-                strcpy(taboidTMP[g].attlen,lenStr);
-                strcpy(taboidTMP[g].attalign,alignStr);
+                snprintf(taboidTMP[g].attr, sizeof(taboidTMP[g].attr), "%s", attrStr);
+                snprintf(taboidTMP[g].typ, sizeof(taboidTMP[g].typ), "%s", attrTyp);
+                snprintf(taboidTMP[g].attmod, sizeof(taboidTMP[g].attmod), "%s", lenStrProced);
+                snprintf(taboidTMP[g].attlen, sizeof(taboidTMP[g].attlen), "%s", lenStr);
+                snprintf(taboidTMP[g].attalign, sizeof(taboidTMP[g].attalign), "%s", alignStr);
 
                 free(tempArray);
+                tempArray = NULL;
                 attrAppendCount=0;
                 free(lenStrProced);
+                lenStrProced = NULL;
                 memset(typStr, 0, sizeof(typStr));
                 memset(attrStr, 0, sizeof(attrStr));
                 memset(modStr, 0, sizeof(modStr));
@@ -1170,6 +1186,8 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
                 break;
             }
         }
+        free(tempArray);
+        tempArray = NULL;
     }
 }
 
@@ -1183,47 +1201,47 @@ int getPgAttrDesc(TABstruct *taboid,pg_attributeDesc *allDesc)
     char attalign[sizeof(taboid->attalign)]={0};
     char attalignby[5]={0};
 
-    strcpy(attname,taboid->attr);
+    snprintf(attname, sizeof(attname), "%s", taboid->attr);
     char *token = strtok(attname, ",");
     while (token != NULL) {
         if(strcmp(token,"dropped") == 0){
             dropExist=1;
         }
         memset(allDesc[i].attname,0,100);
-        strcpy(allDesc[i].attname,token);
+        snprintf(allDesc[i].attname, sizeof(allDesc[i].attname), "%s", token);
         token = strtok(NULL, ",");
         i++;
     }
 
     i=0;
-    strcpy(atttyp,taboid->typ);
+    snprintf(atttyp, sizeof(atttyp), "%s", taboid->typ);
     char *token1 = strtok(atttyp, ",");
     while (token1 != NULL) {
         memset(allDesc[i].atttyp,0,100);
         while(strcmp(allDesc[i].attname,"dropped") == 0){
             i++;
         }
-        strcpy(allDesc[i].atttyp,token1);
+        snprintf(allDesc[i].atttyp, sizeof(allDesc[i].atttyp), "%s", token1);
         token1 = strtok(NULL, ",");
         i++;
     }
 
     i=0;
-    strcpy(attlen,taboid->attlen);
+    snprintf(attlen, sizeof(attlen), "%s", taboid->attlen);
     char *token11 = strtok(attlen, ",");
     while (token11 != NULL) {
         memset(allDesc[i].attlen,0,10);
-        strcpy(allDesc[i].attlen,token11);
+        snprintf(allDesc[i].attlen, sizeof(allDesc[i].attlen), "%s", token11);
         token11 = strtok(NULL, ",");
         i++;
     }
 
     i=0;
-    strcpy(attalign,taboid->attalign);
+    snprintf(attalign, sizeof(attalign), "%s", taboid->attalign);
     char *token2 = strtok(attalign, ",");
     while (token2 != NULL) {
         memset(allDesc[i].attalign,0,2);
-        strcpy(allDesc[i].attalign,token2);
+        snprintf(allDesc[i].attalign, sizeof(allDesc[i].attalign), "%s", token2);
         token2 = strtok(NULL, ",");
         i++;
     }
@@ -1283,8 +1301,8 @@ void getTypForTrunc(harray *attr_harray,parray *GetTxRetAll,TYPstruct *typoid,in
             strcat(typStr,",");
         }
         else{
-            sprintf(attrStr, "%s%s",tempArray[x].attr,",");
-            sprintf(typStr, "%s%s",tempArray[x].typid,",");
+            snprintf(attrStr, sizeof(attrStr), "%s%s",tempArray[x].attr,",");
+            snprintf(typStr, sizeof(typStr), "%s%s",tempArray[x].typid,",");
         }
     }
     char typStrArray[1024][10]={};
@@ -1301,15 +1319,17 @@ void getTypForTrunc(harray *attr_harray,parray *GetTxRetAll,TYPstruct *typoid,in
         for ( x = 0; x < typoidlen; x++ ){
             if ( strcmp(typStrArray[y],typoid[x].oid ) == 0 ){
                 char *typnameret=NULL;
-                typnameret=(char *)malloc(sizeof(typoid[x].typname));
-                strcpy(typnameret,typoid[x].typname);
-                if( y == a-1 ){
+                typnameret=(char *)pdu_malloc(sizeof(typoid[x].typname));
+                if (typnameret == NULL) {
+                    break;
+                }
+                snprintf(typnameret, 100,  "%s", typoid[x].typname);                if( y == a-1 ){
                     strcat(attrTyp,typnameret);
                     free(typnameret);
                     break;
                 }
                 else if ( y == 0 ){
-                    sprintf(attrTyp, "%s%s",typnameret,",");
+                    snprintf(attrTyp, sizeof(attrTyp), "%s%s",typnameret,",");
                     free(typnameret);
                     break;
                 }
@@ -1333,8 +1353,15 @@ void getTypForTrunc(harray *attr_harray,parray *GetTxRetAll,TYPstruct *typoid,in
 void processAttMod(const char attrTyp[],const char modStr[],char *ret)
 {
 
-    char *attrTypx = strdup(attrTyp);
-    char *modStrx = strdup(modStr);
+    char *attrTypx = pdu_strdup(attrTyp);
+    if (attrTypx == NULL) {
+        return;
+    }
+    char *modStrx = pdu_strdup(modStr);
+    if (modStrx == NULL) {
+        free(attrTypx);
+        return;
+    }
 
     char *tokenTyp;
     char *tokenLen;
@@ -1348,19 +1375,23 @@ void processAttMod(const char attrTyp[],const char modStr[],char *ret)
 
     tokenLen = strtok(modStrx, delim);
     while (tokenLen != NULL){
-        char *x = malloc(10);
+        char *x = pdu_malloc(10);
+        if (x == NULL) {
+            break;
+        }
         memset(x,0,10);
-        strcpy(x,tokenLen);
-        parray_append(modarray,x);
+        snprintf(x, 10, "%s", tokenLen);        parray_append(modarray,x);
         tokenLen = strtok(NULL, delim);
     }
 
     tokenTyp = strtok(attrTypx, delim);
     while (tokenTyp != NULL){
-        char *y = malloc(100);
+        char *y = pdu_malloc(100);
+        if (y == NULL) {
+            break;
+        }
         memset(y,0,100);
-        strcpy(y,tokenTyp);
-        parray_append(typarray,y);
+        snprintf(y, 100, "%s", tokenTyp);        parray_append(typarray,y);
         tokenTyp = strtok(NULL, delim);
     }
 
@@ -1368,41 +1399,43 @@ void processAttMod(const char attrTyp[],const char modStr[],char *ret)
     for(i=0;i<parray_num(typarray);i++){
         char *Typ = parray_get(typarray,i);
         char *Len = parray_get(modarray,i);
-        char *tmp=processAttModInner(Typ,Len);
+        char tmp[50];
+        processAttModInner(Typ,Len,tmp,sizeof(tmp));
 
         if(i == 0){
-            sprintf(ret,"%s",tmp);
+            snprintf(ret,2048,"%s",tmp);
         }
         else{
-            sprintf(ret,"%s,%s",ret,tmp);
+            char prev[2048];
+            snprintf(prev,sizeof(prev),"%s",ret);
+            snprintf(ret,2048,"%s,%s",prev,tmp);
         }
     }
     parray_free(modarray);
     parray_free(typarray);
 }
 
-char *processAttModInner(char *tokenTyp,char *tokenLen)
+void processAttModInner(char *tokenTyp,char *tokenLen, char *tmp, size_t tmpsize)
 {
-    static char tmp[50]="";
+    tmp[0] = '\0';
     int numLen = atoi(tokenLen);
     if(numLen == -1){
-        sprintf(tmp,"()");
+        snprintf(tmp, tmpsize, "()");
     }
     else if(strcmp(tokenTyp,"varchar") == 0 ||
             strcmp(tokenTyp,"char") == 0 ||
             strcmp(tokenTyp,"bpchar") == 0){
         numLen = numLen -4;
-        sprintf(tmp,"(%d)",numLen);
+        snprintf(tmp, tmpsize, "(%d)",numLen);
     }
     else if(strcmp(tokenTyp,"numeric") == 0){
         int x=(numLen-4)/65536;
         int y=(numLen-4)%65536;
-        sprintf(tmp,"(%d.%d)",x,y);
+        snprintf(tmp, tmpsize, "(%d.%d)",x,y);
     }
     else if(strcmp(tokenTyp,"timestamp") == 0 || strcmp(tokenTyp,"timestamptz") == 0){
-        sprintf(tmp,"(%d)",numLen);
+        snprintf(tmp, tmpsize, "(%d)",numLen);
     }
-    return tmp;
 }
 
 int isParameter(char *value,int *type){
@@ -1592,11 +1625,13 @@ void cleanPadding(const char *buffer, unsigned int *buff_size,int *padding,int *
 
 char *xman2Insertxman(char *xman,char *tablename)
 {
-    char *xmanRet = (char*)malloc(sizeof(char)*(strlen(xman)+250));
+    char *xmanRet = (char*)pdu_malloc(sizeof(char)*(strlen(xman)+250));
+    if (xmanRet == NULL) {
+        return NULL;
+    }
     memset(xmanRet,0,strlen(xman)+250);
     char *qoutedTablename=quotedIfUpper(tablename);
-    sprintf(xmanRet,"INSERT INTO %s VALUES(%s);",qoutedTablename,xman);
-    return xmanRet;
+    snprintf(xmanRet, 10240,  "INSERT INTO %s VALUES(%s);",qoutedTablename,xman);    return xmanRet;
 }
 
 char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *allDesc,char *tabname)
@@ -1621,14 +1656,24 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
         suffixsize += 10;
     }
 
-    char *prefix =(char*)malloc(sizeof(char)*(suffixsize+prefixsize));//update 表名 set 列名=旧值
-    char *suffix =(char*)malloc(sizeof(char)*suffixsize);//where ( 列名=新值 AND) x N
-    char *samePrefix =(char*)malloc(sizeof(char)*suffixsize);//update 表名 set 列名=旧值 
+    char *prefix =(char*)pdu_malloc(sizeof(char)*(suffixsize+prefixsize));//update 表名 set 列名=旧值
+    if (prefix == NULL) {
+        return NULL;
+    }
+    char *suffix =(char*)pdu_malloc(sizeof(char)*suffixsize);//where ( 列名=新值 AND) x N
+    if (suffix == NULL) {
+        free(prefix);
+        return NULL;
+    }
+    char *samePrefix =(char*)pdu_malloc(sizeof(char)*suffixsize);//update 表名 set 列名=旧值
                                                             //固定拼接一次旧值，以防相同的情况下没有数据
+    if (samePrefix == NULL) {
+        free(prefix);
+        free(suffix);
+        return NULL;
+    }
     memset(samePrefix,0,suffixsize);
-    sprintf(prefix,"UPDATE %s SET ",tabname);
-    sprintf(suffix," WHERE ");
-
+    snprintf(prefix, 10240,  "UPDATE %s SET ",tabname);    snprintf(suffix, 10240,  " WHERE ");
     for(int i=0;i<parray_num(newxman_arr);i++){
         char *new = parray_get(newxman_arr,i);
         char *old = parray_get(oldxman_arr,i);
@@ -1667,15 +1712,32 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
     char *ret = NULL;
     int yy=strlen(prefix)+strlen(suffix);
     if(!isSET){//如果前后的update字段值相同，就返回固定的旧值
-        char *finalPrefix = (char*)malloc(sizeof(char)*(strlen(prefix)+strlen(samePrefix)+10));
-        sprintf(finalPrefix,"%s%s",prefix,samePrefix);
-        ret = (char*)malloc(strlen(finalPrefix)+strlen(suffix)+10);
-        sprintf(ret,"%s\n%s;",finalPrefix,suffix);
+        char *finalPrefix = (char*)pdu_malloc(sizeof(char)*(strlen(prefix)+strlen(samePrefix)+10));
+        if (finalPrefix == NULL) {
+            free(suffix);
+            free(prefix);
+            free(samePrefix);
+            return NULL;
+        }
+        snprintf(finalPrefix, 10240,  "%s%s",prefix,samePrefix);        ret = (char*)pdu_malloc(strlen(finalPrefix)+strlen(suffix)+10);
+        if (ret == NULL) {
+            free(finalPrefix);
+            free(suffix);
+            free(prefix);
+            free(samePrefix);
+            return NULL;
+        }
+        snprintf(ret, 10240,  "%s\n%s;",finalPrefix,suffix);        free(finalPrefix);
     }
     else{
-        ret = (char*)malloc(strlen(prefix)+strlen(suffix)+10);
-        sprintf(ret,"%s\n%s;",prefix,suffix);
-    }
+        ret = (char*)pdu_malloc(strlen(prefix)+strlen(suffix)+10);
+        if (ret == NULL) {
+            free(suffix);
+            free(prefix);
+            free(samePrefix);
+            return NULL;
+        }
+        snprintf(ret, 10240,  "%s\n%s;",prefix,suffix);    }
     
     free(suffix);
     free(prefix);
@@ -1725,10 +1787,10 @@ void prepareRestore()
     char pgDatabasePath[50]="pg_database.txt";
     char dropScanCfg[50]="restore/tab.config";
 
-    FILE *pgSchemaFile = fopen(pgSchemaPath,"w");
-    FILE *pgPublicFile = fopen(pgPublicPath,"w");
-    FILE *pgDatabaseFile = fopen(pgDatabasePath,"a");
-    FILE *dropScanCfgFile = fopen(dropScanCfg,"w");
+    FILE *pgSchemaFile = pdu_fopen(pgSchemaPath,"w");
+    FILE *pgPublicFile = pdu_fopen(pgPublicPath,"w");
+    FILE *pgDatabaseFile = pdu_fopen(pgDatabasePath,"a");
+    FILE *dropScanCfgFile = pdu_fopen(dropScanCfg,"w");
 
     char str1[20]="2200\tpublic";
     commaStrWriteIntoFileSCH_TYP(str1,pgSchemaFile);
@@ -1941,11 +2003,9 @@ void process_type_part(char *type_part, char *col_type, char *col_length) {
             strncpy(col_length, length_part, 255);
             col_length[255] = '\0';
         } else {
-            strcpy(col_length, "");
-        }
+            snprintf(col_length, 100,  "%s", "");        }
     } else {
-        strcpy(col_length, "");
-    }
+        snprintf(col_length, 100,  "%s", "");    }
 
     if(type_part[strlen(type_part)-1] == ','){
         type_part[strlen(type_part)-1]='\0';
@@ -1959,16 +2019,11 @@ void process_type_part(char *type_part, char *col_type, char *col_length) {
 
     if (strstr(lower_type, "character varying") != NULL ||
         (strstr(lower_type, "character") != NULL && strstr(lower_type, "varying") != NULL)) {
-        strcpy(col_type, "varchar");
-    } else if (strstr(lower_type, "character") != NULL) {
-        strcpy(col_type, "char");
-    } else if (strstr(lower_type, "timestamp without time zone") != NULL) {
-        strcpy(col_type, "timestamp");
-    } else if (strstr(lower_type, "timestamp with time zone") != NULL) {
-        strcpy(col_type, "timestamptz");
-    } else {
-        strcpy(col_type, type_part);
-    }
+        snprintf(col_type, 100,  "%s", "varchar");    } else if (strstr(lower_type, "character") != NULL) {
+        snprintf(col_type, 100,  "%s", "char");    } else if (strstr(lower_type, "timestamp without time zone") != NULL) {
+        snprintf(col_type, 100,  "%s", "timestamp");    } else if (strstr(lower_type, "timestamp with time zone") != NULL) {
+        snprintf(col_type, 100,  "%s", "timestamptz");    } else {
+        snprintf(col_type, 100,  "%s", type_part);    }
 }
 
 void parse_column_definition(const char *def, Column *col) {
@@ -2019,11 +2074,12 @@ void getMetaFromManul(char *sqlPath,char *CUR_DB){
     }
 
     char manualTxtPath[300];
-    sprintf(manualTxtPath,"%s/manual/%s.txt",CUR_DB,filename);
-    FILE *manualTxt = fopen(manualTxtPath,"w");
-    FILE *file = fopen(sqlPath, "r");
+    snprintf(manualTxtPath, sizeof(manualTxtPath), "%s/manual/%s.txt",CUR_DB,filename);
+    FILE *manualTxt = pdu_fopen(manualTxtPath,"w");
+    FILE *file = pdu_fopen(sqlPath, "r");
     if (!file) {
         perror("Failed to open file");
+        if (manualTxt) fclose(manualTxt);
         return;
     }
     char line[500];
@@ -2039,7 +2095,7 @@ void getMetaFromManul(char *sqlPath,char *CUR_DB){
             char *tab = strtok(line," ");
             tab = strtok(NULL," ");
             tab = strtok(NULL," ");
-            strcpy(tabname,tab);
+            snprintf(tabname, sizeof(tabname), "%s", tab);
 
             inside_create_table = 1;
             col_count = 0;
@@ -2059,17 +2115,22 @@ void getMetaFromManul(char *sqlPath,char *CUR_DB){
                 memset(typStr,0,col_count*20);
                 memset(modStr,0,col_count*10);
 
+                size_t attSz = (size_t)col_count*256;
+                size_t typSz = (size_t)col_count*20;
+                size_t modSz = (size_t)col_count*10;
                 for (int i = 0; i < col_count; i++) {
-                    sprintf(attStr,"%s%s",attStr, cols[i].name);
-                    sprintf(typStr,"%s%s",typStr, cols[i].type);
-                    sprintf(modStr,"%s(%s)",modStr, cols[i].length);
+                    strncat(attStr, cols[i].name, attSz - strlen(attStr) - 1);
+                    strncat(typStr, cols[i].type, typSz - strlen(typStr) - 1);
+                    strncat(modStr, "(", modSz - strlen(modStr) - 1);
+                    strncat(modStr, cols[i].length, modSz - strlen(modStr) - 1);
+                    strncat(modStr, ")", modSz - strlen(modStr) - 1);
                     if (i < col_count - 1) {
-                        sprintf(attStr,"%s,",attStr);
-                        sprintf(typStr,"%s,",typStr);
-                        sprintf(modStr,"%s,",modStr);
+                        strncat(attStr, ",", attSz - strlen(attStr) - 1);
+                        strncat(typStr, ",", typSz - strlen(typStr) - 1);
+                        strncat(modStr, ",", modSz - strlen(modStr) - 1);
                     }
                 }
-                sprintf(record,"<oid>\t<filenode>\t<toastoid>\t<toastnode>\t<namespace>\t%s\t%s\t%s\t%d\t%s\tUNKNOWN\tUNKNOWN\n",tabname,attStr,typStr,col_count,modStr);
+                snprintf(record, sizeof(record), "<oid>\t<filenode>\t<toastoid>\t<toastnode>\t<namespace>\t%s\t%s\t%s\t%d\t%s\tUNKNOWN\tUNKNOWN\n",tabname,attStr,typStr,col_count,modStr);
                 fputs(record,manualTxt);
                 ddlCnt++;
                 continue;
@@ -2105,7 +2166,7 @@ parray *getfilenameParray(char *path2search)
             }
         }
     }
-    sprintf(fullPath,"%s/%s/*",currPath,path2search);
+    snprintf(fullPath, sizeof(fullPath), "%s/%s/*",currPath,path2search);
     WIN32_FIND_DATA findFileData;
     HANDLE hFind = FindFirstFile(fullPath, &findFileData);
 
@@ -2113,8 +2174,7 @@ parray *getfilenameParray(char *path2search)
         do {
             if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                 char filename[MAXPGPATH];
-                strcpy(filename,findFileData.cFileName);
-                parray_append(ret,filename);
+                snprintf(filename, 256,  "%s", findFileData.cFileName);                parray_append(ret,filename);
             }
         } while (FindNextFile(hFind, &findFileData) != 0);
 
@@ -2138,9 +2198,11 @@ parray *getfilenameParray(char *path2search)
     else{
         while ((entry1 = readdir(dir1)) != NULL) {
             if (entry1->d_type == 8) {
-                char *filename = (char*)malloc(sizeof(char)*100);
-                strcpy(filename,entry1->d_name);
-                char *suffix = strrchr(filename, '.');
+                char *filename = (char*)pdu_malloc(sizeof(char)*100);
+                if (filename == NULL) {
+                    continue;
+                }
+                snprintf(filename, 256,  "%s", entry1->d_name);                char *suffix = strrchr(filename, '.');
                 if(strcmp(suffix,".sql") == 0){
                     parray_append(ret,filename);
                 }
@@ -2157,7 +2219,7 @@ char *hexBuffer2Str(const char *buff, char *hexBuffer,int size) {
     for (i = 0; i < size; i++) {
         char a[3];
         unsigned char b = buff[i];
-        sprintf(a, "%02X", b);
+        snprintf(a, sizeof(a), "%02X", b);
         strcat(hexBuffer,a);
     }
 
@@ -2222,7 +2284,7 @@ int* findMinMaxNumbers(const char* path)
 void mergeToast(char *PATH,char *toastfile)
 {
     char toastPATH[100];
-    sprintf(toastPATH,"%s/%s",PATH,toastfile);
+    snprintf(toastPATH, sizeof(toastPATH), "%s/%s",PATH,toastfile);
 
     int* result = findMinMaxNumbers(PATH);
 
@@ -2292,15 +2354,13 @@ char* quotedIfUpper(const char* input){
             printf("Memory allocation failed.\n");
             exit(1);
         }
-        sprintf(result, "\"%s\"", input);
-    } else {
+        snprintf(result, 3, "\"%s\"", input);    } else {
         result = (char*)malloc(len + 1);
         if (result == NULL) {
             printf("Memory allocation failed.\n");
             exit(1);
         }
-        strcpy(result, input);
-    }
+        snprintf(result, 1, "%s", input);    }
 
     return result;
 }
@@ -2326,8 +2386,7 @@ uintptr_t timestamptz_to_str_og(TimestampTz dt)
 	strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", ltime);
 	strftime(zone, sizeof(zone), "%Z", ltime);
 
-    sprintf(buf, "%s.%06d %s", ts, (int) (dt % USECS_PER_SEC), zone);
-
+    snprintf(buf, 1024,  "%s.%06d %s", ts, (int) (dt % USECS_PER_SEC), zone);
     return (uintptr_t)buf;
 }
 
@@ -2362,7 +2421,7 @@ int getPGVersion(char *PGDATA){
     char pg_versionPath[strlen(PGDATA)+100];
     char versionNumStr[10];
     memset(versionNumStr,0,10);
-    sprintf(pg_versionPath,"%s/%s",PGDATA,VERSIONTYPE);
+    snprintf(pg_versionPath, sizeof(pg_versionPath), "%s/%s",PGDATA,VERSIONTYPE);
     FILE *fp = fopen(pg_versionPath,"r");
 
     if(fp == NULL){
@@ -2533,7 +2592,7 @@ bool compareHexStrings(const char *a, const char *b) {
 bool lsnIsReached(uint64 pre,uint64 suff,char *endLSN)
 {
     char currentLSN[50];
-	sprintf(currentLSN,"%X/%08X",LSN_FORMAT_ARGS(pre),LSN_FORMAT_ARGS(suff));
+	snprintf(currentLSN, sizeof(currentLSN), "%X/%08X",LSN_FORMAT_ARGS(pre),LSN_FORMAT_ARGS(suff));
 	int lsnReached = compareHexStrings(currentLSN,endLSN);
     bool ret = lsnReached ? true : false;
     return ret;
@@ -2568,7 +2627,7 @@ bool find_unique_path(const char *a, const char *dboid, char **result_path) {
 
         if (is_directory(temp_path)) {
             if (count == 0) {
-                found_path = strdup(temp_path);
+                found_path = pdu_strdup(temp_path);
                 if (!found_path) {
                     closedir(dir);
                     return false;
@@ -2622,8 +2681,8 @@ void loadTbspc(DBstruct *databaseoid,int dbsize,char *PGDATA)
         if (lstat(sourcepath, &st) < 0)
         {
             char dbpath[MAXPGPATH];
-            sprintf(dbpath,"%sbase/%s",PGDATA,dboid);
-            strcpy(databaseoid[i].dbpath,dbpath);
+            snprintf(dbpath, sizeof(dbpath), "%sbase/%s",PGDATA,dboid);
+            snprintf(databaseoid[i].dbpath, sizeof(databaseoid[i].dbpath), "%s", dbpath);
             continue;
 
         }
@@ -2638,12 +2697,12 @@ void loadTbspc(DBstruct *databaseoid,int dbsize,char *PGDATA)
         if(!find_unique_path(targetpath,dboid,&dbpath)){
             printf("%sTable space issue, please contact support%s",COLOR_WARNING,C_RESET);
             char dbpath_fail[MAXPGPATH];
-            sprintf(dbpath_fail,"%s%s",PGDATA,dboid);
-            strcpy(databaseoid[i].dbpath,dbpath_fail);
+            snprintf(dbpath_fail, sizeof(dbpath_fail), "%s%s",PGDATA,dboid);
+            snprintf(databaseoid[i].dbpath, sizeof(databaseoid[i].dbpath), "%s", dbpath_fail);
             continue;
         }
         else{
-            strcpy(databaseoid[i].dbpath,dbpath);
+            snprintf(databaseoid[i].dbpath, sizeof(databaseoid[i].dbpath), "%s", dbpath);
         }
     }
 }
@@ -2662,8 +2721,7 @@ void dboidWithTblIntoFile(DBstruct *databaseoid,int dosize,char *filepath){
         int size = strlen(databaseoid[i].oid)+strlen(databaseoid[i].database)+
                    strlen(databaseoid[i].tbloid)+strlen(databaseoid[i].dbpath);
         char ret[size+10];
-        sprintf(ret,"%s\t%s\t%s\t%s\n",databaseoid[i].oid,databaseoid[i].database,databaseoid[i].tbloid,databaseoid[i].dbpath);
-        fputs(ret,file);
+        snprintf(ret, 10240,  "%s\t%s\t%s\t%s\n",databaseoid[i].oid,databaseoid[i].database,databaseoid[i].tbloid,databaseoid[i].dbpath);        fputs(ret,file);
     }
     fclose(file);
 }
@@ -2884,12 +2942,12 @@ int dropFileRename(dropContext *dc)
 
     char lastRestoreFile[MAXPGPATH]={0};
     char newRestoreFile[MAXPGPATH]={0};
-    sprintf(lastRestoreFile,"%s/%lld.csv",csvPrefix,currSrtOffset);
+    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/%lld.csv",csvPrefix,currSrtOffset);
     if(BadPct){
-        sprintf(newRestoreFile,"%s/%d%%BAD_%s_%lld_%dblks_%ditems.csv",csvPrefix,BadPct,time_str,currSrtOffset,currBlks,currItems);
+        snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/%d%%BAD_%s_%lld_%dblks_%ditems.csv",csvPrefix,BadPct,time_str,currSrtOffset,currBlks,currItems);
     }
     else{
-        sprintf(newRestoreFile,"%s/%s_%lld_%dblks_%ditems.csv",csvPrefix,time_str,currSrtOffset,currBlks,currItems);
+        snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/%s_%lld_%dblks_%ditems.csv",csvPrefix,time_str,currSrtOffset,currBlks,currItems);
     }
     if (access(lastRestoreFile, F_OK) != 0) {
         return FAILURE_RET;
@@ -2915,8 +2973,8 @@ int dropFileRenameforToast(char *csvPrefix,off_t currSrtOffset,int currBlks,int 
 
     char lastRestoreFile[MAXPGPATH]={0};
     char newRestoreFile[MAXPGPATH]={0};
-    sprintf(lastRestoreFile,"%s/.toast/%lld",csvPrefix,currSrtOffset);
-    sprintf(newRestoreFile,"%s/.toast/%s-%lld-%dblks-%ditems",csvPrefix,time_str,currSrtOffset,currBlks,currItems);
+    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/.toast/%lld",csvPrefix,currSrtOffset);
+    snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/.toast/%s-%lld-%dblks-%ditems",csvPrefix,time_str,currSrtOffset,currBlks,currItems);
     if (access(lastRestoreFile, F_OK) != 0) {
         return FAILURE_RET;
     }
@@ -2945,8 +3003,8 @@ int dropFileRenameforFinal(dropContext *dc)
 
     char lastRestoreFile[MAXPGPATH]={0};
     char newRestoreFile[MAXPGPATH]={0};
-    sprintf(lastRestoreFile,"%s/Toast.csv",csvPrefix);
-    sprintf(newRestoreFile,"%s/TOAST_%lld_%dblks_%drecords.csv",csvPrefix,time_str,currBlks,currItems);
+    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/Toast.csv",csvPrefix);
+    snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/TOAST_%lld_%dblks_%drecords.csv",csvPrefix,time_str,currBlks,currItems);
     if (access(lastRestoreFile, F_OK) != 0) {
         return FAILURE_RET;
     }
@@ -3028,7 +3086,7 @@ void genCopyForDs(char *tabname)
 
     ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
     get_parent_directory(path);
-    sprintf(fullPath,"%s/%s/%s",path,dropscanDir,tabname);
+    snprintf(fullPath, sizeof(fullPath), "%s/%s/%s",path,dropscanDir,tabname);
 
     DIR *dir1;
     struct dirent *entry1;
@@ -3056,13 +3114,12 @@ void genCopyForDs(char *tabname)
         }
     }
     char copyFilename[MAXPGPATH]={0};
-    sprintf(copyFilename,"%s/COPY.sql",fullPath);
+    snprintf(copyFilename, sizeof(copyFilename), "%s/COPY.sql",fullPath);
     FILE *copyfp = fopen(copyFilename,"w");
     if(file_count > 0){
         for (int i = 0; i < file_count; i++) {
             char *str2write=malloc(MAXPGPATH);
-            sprintf(str2write,"COPY %s FROM '%s/%s';\n",tabname,fullPath,filenames[i]);
-            fputs(str2write,copyfp);
+            snprintf(str2write, 1024,  "COPY %s FROM '%s/%s';\n",tabname,fullPath,filenames[i]);            fputs(str2write,copyfp);
             free(str2write);
         }
         printf("%s%s%s\n",COLOR_UNLOAD,copyFilename,C_RESET);
@@ -3084,7 +3141,7 @@ void initToastHashforDs(dropContext *dc)
 {
     harray *toastHash = NULL;
     char metaToastPath[100];
-    sprintf(metaToastPath,"%s/.toast/dbf_idx",dc->csvPrefix);
+    snprintf(metaToastPath, sizeof(metaToastPath), "%s/.toast/dbf_idx",dc->csvPrefix);
     int numLines = 0;
     FILE *file = fileGetLines(metaToastPath,&numLines);
     if(file == NULL)
@@ -3119,7 +3176,7 @@ void initToastHashforDs(dropContext *dc)
 int initPageOffsforDs(dropContext *dc)
 {
     char dbf_tab[100]={0};
-    sprintf(dbf_tab,"%s/.toast/dbf_tab",dc->csvPrefix);
+    snprintf(dbf_tab, sizeof(dbf_tab), "%s/.toast/dbf_tab",dc->csvPrefix);
     FILE *exist = fopen(dbf_tab,"r");
     if(!exist){
         return FAILURE_RET;
@@ -3130,7 +3187,7 @@ int initPageOffsforDs(dropContext *dc)
 
     parray *idxs = parray_new();
     char currIdxName[100]={0};
-    sprintf(currIdxName,"%s/.toast/dbf_fsm",dc->csvPrefix);
+    snprintf(currIdxName, sizeof(currIdxName), "%s/.toast/dbf_fsm",dc->csvPrefix);
     FILE *idxfp = fopen(currIdxName,"r");
     if(idxfp ==NULL){
         return FAILURE_RET;
@@ -3384,8 +3441,15 @@ void replaceArchPath()
 {
     char *srcname = "pdu.ini";
     char *tmpname = "pdu.initmp";
-    FILE *srcFile = fopen(srcname, "r");
-    FILE *tmpFile = fopen(tmpname, "w");
+    FILE *srcFile = pdu_fopen(srcname, "r");
+    if (srcFile == NULL) {
+        return;
+    }
+    FILE *tmpFile = pdu_fopen(tmpname, "w");
+    if (tmpFile == NULL) {
+        fclose(srcFile);
+        return;
+    }
 
     char line[1024];
     const char *target = "ARCHIVE_DEST=";
@@ -3531,34 +3595,34 @@ bool has_gibberish(const char *xman) {
 void getDropScanOids(TABstruct *taboid,char *flag)
 {
     if(strcmp(flag,"pg_class") == 0){
-        strcpy(taboid->oid,"1259");
-        strcpy(taboid->filenode,"1259");
-        strcpy(taboid->toastoid,"0");
-        strcpy(taboid->toastnode,"0");
-        strcpy(taboid->nsp,"0");
-        strcpy(taboid->tab,"pg_class");
-        strcpy(taboid->attr,CLASS_ATTR);
-        strcpy(taboid->typ,CLASS_ATTR);
+        snprintf(taboid->oid, sizeof(taboid->oid), "%s", "1259");
+        snprintf(taboid->filenode, sizeof(taboid->filenode), "%s", "1259");
+        snprintf(taboid->toastoid, sizeof(taboid->toastoid), "%s", "0");
+        snprintf(taboid->toastnode, sizeof(taboid->toastnode), "%s", "0");
+        snprintf(taboid->nsp, sizeof(taboid->nsp), "%s", "0");
+        snprintf(taboid->tab, sizeof(taboid->tab), "%s", "pg_class");
+        snprintf(taboid->attr, sizeof(taboid->attr), "%s", CLASS_ATTR);
+        snprintf(taboid->typ, sizeof(taboid->typ), "%s", CLASS_ATTR);
         int nattr = countCommas(CLASS_ATTR)+1;
-        sprintf(taboid->nattr,"%d",nattr);
-        strcpy(taboid->attmod,CLASS_ATTR);
-        strcpy(taboid->attlen,CLASS_ATTR);
-        strcpy(taboid->attalign,CLASS_ATTR);
+        snprintf(taboid->nattr, sizeof(taboid->nattr), "%d",nattr);
+        snprintf(taboid->attmod, sizeof(taboid->attmod), "%s", CLASS_ATTR);
+        snprintf(taboid->attlen, sizeof(taboid->attlen), "%s", CLASS_ATTR);
+        snprintf(taboid->attalign, sizeof(taboid->attalign), "%s", CLASS_ATTR);
     }
     else if(strcmp(flag,"pg_attribute") == 0){
-        strcpy(taboid->oid,"1249");
-        strcpy(taboid->filenode,"1249");
-        strcpy(taboid->toastoid,"0");
-        strcpy(taboid->toastnode,"0");
-        strcpy(taboid->nsp,"0");
-        strcpy(taboid->tab,"pg_attribute");
-        strcpy(taboid->attr,ATTR_ATTR);
-        strcpy(taboid->typ,ATTR_ATTR);
+        snprintf(taboid->oid, sizeof(taboid->oid), "%s", "1249");
+        snprintf(taboid->filenode, sizeof(taboid->filenode), "%s", "1249");
+        snprintf(taboid->toastoid, sizeof(taboid->toastoid), "%s", "0");
+        snprintf(taboid->toastnode, sizeof(taboid->toastnode), "%s", "0");
+        snprintf(taboid->nsp, sizeof(taboid->nsp), "%s", "0");
+        snprintf(taboid->tab, sizeof(taboid->tab), "%s", "pg_attribute");
+        snprintf(taboid->attr, sizeof(taboid->attr), "%s", ATTR_ATTR);
+        snprintf(taboid->typ, sizeof(taboid->typ), "%s", ATTR_ATTR);
         int nattr = countCommas(ATTR_ATTR)+1;
-        sprintf(taboid->nattr,"%d",nattr);
-        strcpy(taboid->attmod,ATTR_ATTR);
-        strcpy(taboid->attlen,ATTR_ATTR);
-        strcpy(taboid->attalign,ATTR_ATTR);
+        snprintf(taboid->nattr, sizeof(taboid->nattr), "%d",nattr);
+        snprintf(taboid->attmod, sizeof(taboid->attmod), "%s", ATTR_ATTR);
+        snprintf(taboid->attlen, sizeof(taboid->attlen), "%s", ATTR_ATTR);
+        snprintf(taboid->attalign, sizeof(taboid->attalign), "%s", ATTR_ATTR);
     }
 }
 
@@ -3566,8 +3630,7 @@ int getDecodeFunctions(const char *typ,decodeFuncs attr2Process[MAX_COL_NUM])
 {
     resetArray2Process(attr2Process);
     char *attr2DecodeTMP = (char *)malloc((strlen(typ)+1)*sizeof(char));
-    strcpy(attr2DecodeTMP,typ);
-    int nAttr=0;
+    snprintf(attr2DecodeTMP, 10240,  "%s", typ);    int nAttr=0;
     char *attrChars[MAX_COL_NUM];
     for (int i = 0; i < MAX_COL_NUM; i++) {
         attrChars[i] = (char *)malloc(20);
@@ -3604,10 +3667,10 @@ systemDropContext* initSystemDropContext(char *flag)
     sdc->taboid = (TABstruct*)malloc(sizeof(TABstruct));
     sdc->allDesc = (pg_attributeDesc*)malloc(20*sizeof(pg_attributeDesc));
     if(strcmp(flag,"pg_class") == 0){
-        strcpy(sdc->savepath,"restore/meta/pg_class.txt");
+        snprintf(sdc->savepath, sizeof(sdc->savepath), "%s", "restore/meta/pg_class.txt");
     }
     else{
-        strcpy(sdc->savepath,"restore/meta/pg_attr.txt");
+        snprintf(sdc->savepath, sizeof(sdc->savepath), "%s", "restore/meta/pg_attr.txt");
     }
     FILE *fp = fopen(sdc->savepath,"w");
     fclose(fp);
@@ -3827,8 +3890,7 @@ void getAttrAlignAndAttlen(char *attr,char *alignStr,char *attlenStr)
             getStdTyp(singleAttr,singleStdAttr);
         }
         else{
-            strcpy(singleStdAttr,singleAttr);
-        }
+            snprintf(singleStdAttr, 10, "%s", singleAttr);        }
         int size = sizeof(alignLen_table)/sizeof(alignLen_table[0]);
         int j;
         for ( j=0;j<size;j++ ){
@@ -3966,17 +4028,21 @@ char* execCMD(const char *command)
 {
     FILE *pipe;
     char buffer[1024];
-    char *output = (char*)malloc(sizeof(char)*200);
+    char *output = (char*)pdu_malloc(sizeof(char)*1024);
+    if (output == NULL) {
+        return NULL;
+    }
+    output[0] = '\0';
 
     pipe = popen(command, "r");
     if (pipe == NULL) {
         perror("popen failed");
+        free(output);
         return NULL;
     }
 
     while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
-        size_t len = strlen(buffer);
-        strcpy(output, buffer);
+        snprintf(output, 1024, "%s", buffer);
     }
 
     pclose(pipe);

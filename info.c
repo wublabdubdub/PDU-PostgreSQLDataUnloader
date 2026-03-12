@@ -38,11 +38,11 @@ void cprDeclaration(void)
     char line5[100];
 
 
-    sprintf(DBTYPE,"PDU: PostgreSQL Data Unloader           ");
-    sprintf(SUPPORTVER,"  • PostgreSQL %d", PG_VERSION_NUM);
+    snprintf(DBTYPE, sizeof(DBTYPE), "PDU: PostgreSQL Data Unloader           ");
+    snprintf(SUPPORTVER, sizeof(SUPPORTVER), "  • PostgreSQL %d", PG_VERSION_NUM);
 
-    sprintf(linetitle,"COMMUNITY VERSION");
-    sprintf(line1,"• Licensed to everyone%-18s");
+    snprintf(linetitle, sizeof(linetitle), "COMMUNITY VERSION");
+    snprintf(line1, sizeof(line1), "• Licensed to everyone%-18s");
 
     printf("%s╔══════════════════════════════════════════════════════╗%s\n",COLOR_COPYRIGHT,C_RESET);
     printf("%s║  Copyright 2024-2025 ZhangChen. All rights reserved  ║%s\n",COLOR_COPYRIGHT,C_RESET);

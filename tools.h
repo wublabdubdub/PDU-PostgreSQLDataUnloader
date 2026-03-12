@@ -734,7 +734,7 @@ static void trim_directory(char* path);
 
 void processAttMod(const char attrTyp[],const char modStr[],char *ret);
 
-char *processAttModInner(char *tokenTyp,char *tokenLen);
+void processAttModInner(char *tokenTyp,char *tokenLen, char *tmp, size_t tmpsize);
 
 void removeSpaces(char *str);
 

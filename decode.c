@@ -312,17 +312,17 @@ void decodeLogPrint(FILE *logErr,char *content,int flag,int curr_att,int size)
 		char err[strlen(content)+100];
 		if(flag == sizeLtZero){
 			if(loglevel_decode == xmanDecodeLog){
-				sprintf(err,"\nParsed field %d but tuple length is already less than zero, all parsed data: %s",curr_att+1,content);
+				snprintf(err, sizeof(err), "\nParsed field %d but tuple length is already less than zero, all parsed data: %s",curr_att+1,content);
 			}
 		}
 		else if(flag == resLtZero){
 			if(loglevel_decode == xmanDecodeLog){
-				sprintf(err,"\nField %d decode function returned error, all parsed data: %s,",curr_att + 1, content);
+				snprintf(err, sizeof(err), "\nField %d decode function returned error, all parsed data: %s,",curr_att + 1, content);
 			}
 		}
 		else if(flag == sizeNotZero){
 			if(loglevel_decode == xmanDecodeLog){
-				sprintf(err,"\nAll %d fields parsed, but tuple has %d bytes remaining, all parsed data: %s",curr_att,size, content);
+				snprintf(err, sizeof(err), "\nAll %d fields parsed, but tuple has %d bytes remaining, all parsed data: %s",curr_att,size, content);
 			}
 		}
 		fputs(err,logErr);
@@ -338,7 +338,7 @@ void decodeLogPrint(FILE *logErr,char *content,int flag,int curr_att,int size)
  */
 void initCURDBPath(char *filepath){
 	memset(CURDBPath,0,1024);
-	strcpy(CURDBPath,filepath);
+	snprintf(CURDBPath, sizeof(CURDBPath), "%s", filepath);
 }
 
 /**
@@ -350,7 +350,7 @@ void initCURDBPath(char *filepath){
  */
 void initCURDBPathforDB(char *filepath){
 	memset(CURDBPathforDB,0,1024);
-	strcpy(CURDBPathforDB,filepath);
+	snprintf(CURDBPathforDB, sizeof(CURDBPathforDB), "%s", filepath);
 }
 
 /**
@@ -362,7 +362,7 @@ void initCURDBPathforDB(char *filepath){
  */
 void initToastId(char *toastnode){
 	memset(toastId,0,50);
-	strcpy(toastId,toastnode);
+	snprintf(toastId, sizeof(toastId), "%s", toastnode);
 }
 
 static void
@@ -392,7 +392,9 @@ emitFieldValue(const char *val)
 		if (val == NULL)
 			return;
 
-		char *duplicated = strdup(val);
+		char *duplicated = pdu_strdup(val);
+		if (!duplicated)
+			return;
 		if (!xmanOldParrayReturn)
 			parray_append(xmanOldParray, duplicated);
 		else
@@ -1083,7 +1085,7 @@ serializeFloat32(const char *src, unsigned int avail, unsigned int *used)
 		return PARSE_ERR_INSUFFICIENT;
 
 	floatVal = *(float *) alignedSrc;
-	sprintf(textRepr, "%g", (double) floatVal);
+	snprintf(textRepr, sizeof(textRepr), "%g", (double) floatVal);
 
 	emitFieldValue(textRepr);
 	*used = sizeof(float) + offset;
@@ -1107,7 +1109,7 @@ serializeFloat64(const char *src, unsigned int avail, unsigned int *used)
 		return PARSE_ERR_INSUFFICIENT;
 
 	dblVal = *(double *) alignedSrc;
-	sprintf(textRepr, "%g", dblVal);
+	snprintf(textRepr, sizeof(textRepr), "%g", dblVal);
 
 	emitFieldValue(textRepr);
 	*used = sizeof(double) + offset;
@@ -1717,8 +1719,7 @@ decode_macaddr(const char *input_data, unsigned int data_length, unsigned int *c
 	if (data_length < 6)
 		return -1;
 
-	snprintf(result, sizeof(result), "%02x:%02x:%02x:%02x:%02x:%02x",
-			 (unsigned char) input_data[0], (unsigned char) input_data[1], (unsigned char) input_data[2],
+	snprintf(result, 1024,  "%02x:%02x:%02x:%02x:%02x:%02x",			 (unsigned char) input_data[0], (unsigned char) input_data[1], (unsigned char) input_data[2],
 			 (unsigned char) input_data[3], (unsigned char) input_data[4], (unsigned char) input_data[5]);
 
 	if (ExportMode_decode == SQLform)
@@ -2190,12 +2191,14 @@ emitEncodedValue(const char *str, int orig_len)
 
 	int			curr_offset = 0;
 	int			len = orig_len;
-    char *tmp_buff = malloc(2 * orig_len + 1);
-
+    if (orig_len < 0 || (size_t)orig_len > SIZE_MAX / 2 - 1) {
+		fprintf(stderr, "emitEncodedValue: invalid length %d\n", orig_len);
+		return -1;
+	}
+    char *tmp_buff = pdu_malloc(2 * (size_t)orig_len + 1);
 	if (tmp_buff == NULL)
 	{
-		perror("malloc");
-		exit(1);
+		return -1;
 	}
 
 
@@ -2378,25 +2381,25 @@ static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_s
 		#endif
 
 		#if MAINDEBUG == 1
-		sprintf(CURDBPath,"/home/11pg/data/base/16384/");
+		snprintf(CURDBPath, sizeof(CURDBPath), "/home/11pg/data/base/16384/");
 		#endif
 
-		strcpy(toast_relation_path,CURDBPath);
+		snprintf(toast_relation_path, sizeof(toast_relation_path), "%s", CURDBPath);
 
 		if(strcmp(toastId,"TOASTNODE") == 0){
 			char a[20];
-			sprintf(a,"%d",toast_ptr.va_toastrelid);
+			snprintf(a, sizeof(a), "%d",toast_ptr.va_toastrelid);
 			initToastId(a);
 		}
 
-		sprintf(toast_relation_filename, "%s/%s", toast_relation_path,toastId);
+		snprintf(toast_relation_filename, sizeof(toast_relation_filename), "%s/%s", toast_relation_path,toastId);
 		toast_rel_fp = fopen(toast_relation_filename, "rb");
 		if(toast_rel_fp == NULL){
 			if( resTyp_decode == UPDATEtyp){
 				memset(toast_relation_path,0,500);
 				memset(toast_relation_filename,0,550);
-				strcpy(toast_relation_path,CURDBPathforDB);
-				sprintf(toast_relation_filename, "%s/%s", toast_relation_path,toastId);
+				snprintf(toast_relation_path, sizeof(toast_relation_path), "%s", CURDBPathforDB);
+				snprintf(toast_relation_filename, sizeof(toast_relation_filename), "%s/%s", toast_relation_path,toastId);
 				toast_rel_fp = fopen(toast_relation_filename, "rb");
 				if(toast_rel_fp == NULL){
 					return -1;
@@ -2409,7 +2412,11 @@ static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_s
 
 		unsigned int toast_relation_block_size = determinePageDimension(toast_rel_fp);
 		fseek(toast_rel_fp, 0, SEEK_SET);
-		toast_data = malloc(toast_ptr.va_rawsize*2);
+		if (toast_ptr.va_rawsize <= 0 || (size_t)toast_ptr.va_rawsize > SIZE_MAX / 2) {
+			fclose(toast_rel_fp);
+			return -1;
+		}
+		toast_data = pdu_malloc((size_t)toast_ptr.va_rawsize*2);
 		unsigned int	toastDataRead = 0;
 
 		result = assembleToastByIndex(
@@ -2459,7 +2466,7 @@ int assembleToastByIndex(Oid toastOid,unsigned int toastExternalSize,char *toast
 	parray *chunkInfosInner = parray_new();
 
 	char toastOidVal[20];
-	sprintf(toastOidVal,"%d",toastOid);
+	snprintf(toastOidVal, sizeof(toastOidVal), "%d",toastOid);
 	unsigned int index = hash(toastHash, toastOidVal, toastHash->allocated);
 	Node* node = toastHash->table[index];
 	while (node != NULL) {
@@ -2572,7 +2579,7 @@ static int extractToastedPayloadDs(const char *input, unsigned int input_len, un
 		return meta.va_valueid;
 
 	const size_t workspace_len = meta.va_rawsize * 2;
-	char *payload = (char *) malloc(workspace_len);
+	char *payload = (char *) pdu_malloc(workspace_len);
 
 	if (payload == NULL)
 		return -1;
@@ -3848,9 +3855,7 @@ char* xmanDecodeDrop(decodeFunc *array2Process,const char *tupleData, unsigned i
 			harray_append(dc->toastOids,HARRAYINT,&val,val);
 			char *toastOidPath = malloc(100);
 			char *valstr = malloc(20);
-			sprintf(valstr,"%d\n",val);
-			sprintf(toastOidPath,"%s/.toast/.toastoid",dc->csvPrefix);
-			FILE *toastOidfp = fopen(toastOidPath,"a");
+			snprintf(valstr, 20, "%d\n",val);			snprintf(toastOidPath, 100, "%s/.toast/.toastoid",dc->csvPrefix);			FILE *toastOidfp = fopen(toastOidPath,"a");
 			fputs(valstr,toastOidfp);
 			fclose(toastOidfp);
 			free(toastOidPath);
@@ -3964,10 +3969,10 @@ void commaStrWriteIntoFIleAttr(char *str,FILE *file)
     char *token=strtok(str, "\t");
     while (token != NULL){
         char tmpstr2[100]="";
-        strcpy(tmpstr2,token);
+        snprintf(tmpstr2, sizeof(tmpstr2), "%s", token);
         removeSpaces(tmpstr2);
         if (colcount == relidNum){
-            sprintf(tmpstr1, "%s%s", tmpstr2, "\t");
+            snprintf(tmpstr1, sizeof(tmpstr1), "%s%s", tmpstr2, "\t");
         }
         else if (colcount == nameNum){
 			strcat(tmpstr1,tmpstr2);
@@ -4028,11 +4033,11 @@ void commaStrWriteIntoFileCLASS(char *str,FILE *file)
     char *token=strtok(str, "\t");
     while (token != NULL){
         char tmpstr2[100]="";
-        strcpy(tmpstr2,token);
+        snprintf(tmpstr2, sizeof(tmpstr2), "%s", token);
 
         if (colcount == oidNum)
         {
-            sprintf(tmpstr1, "%s%s", tmpstr2, "\t");
+            snprintf(tmpstr1, sizeof(tmpstr1), "%s%s", tmpstr2, "\t");
         }
 
         else if (colcount == nameNum)
@@ -4048,7 +4053,7 @@ void commaStrWriteIntoFileCLASS(char *str,FILE *file)
         }
         else if (colcount == filenodeNum)
         {
-            strcpy(filenode,token);
+            snprintf(filenode, sizeof(filenode), "%s", token);
 			strcat(tmpstr1,tmpstr2);
 			strcat(tmpstr1,"\t");
         }
@@ -4059,7 +4064,7 @@ void commaStrWriteIntoFileCLASS(char *str,FILE *file)
         }
         else if (colcount == kindNum)
         {
-            sprintf(relkind,"%s",tmpstr2);
+            snprintf(relkind, sizeof(relkind), "%s",tmpstr2);
         }
 
         else if (colcount == nattsNum)
@@ -4196,7 +4201,7 @@ struct varlena *toast_fetch_datumds(struct varlena *attr,Oid *toid)
 		#endif
 
 		char toastfilePath[MAXPGPATH]={0};
-		sprintf(toastfilePath, "%s/.toast/dbf", dc->csvPrefix);
+		snprintf(toastfilePath, sizeof(toastfilePath), "%s/.toast/dbf", dc->csvPrefix);
 		harray *toastHash = dc->toastOids;
 		int detoastret = assembleToastByIndex(
 			toast_ptr.va_valueid,
