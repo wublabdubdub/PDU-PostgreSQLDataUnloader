@@ -334,9 +334,12 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
             resetArray2Process(attr2Process);
 
             memset(result,0,MAXPGPATH);
-            if(exmode == CSVform)
-                snprintf(result, 1024,  "%s/%s/%s%s",CUR_DB,CUR_SCH,bootFileName,".csv");            else if(exmode == SQLform)
-                snprintf(result, 1024,  "%s/%s/%s%s",CUR_DB,CUR_SCH,bootFileName,".sql");            if (strcmp(BOOTTYPE,TABLE_BOOTTYPE) == 0){
+            if (exmode == CSVform) {
+                snprintf(result, 1024, "%s/%s/%s%s", CUR_DB, CUR_SCH, bootFileName, ".csv");
+            } else if (exmode == SQLform) {
+                snprintf(result, 1024, "%s/%s/%s%s", CUR_DB, CUR_SCH, bootFileName, ".sql");
+            }
+            if (strcmp(BOOTTYPE,TABLE_BOOTTYPE) == 0){
                 if (hundred >0){
                     bootFile = fopen(result, "a");
                 }
@@ -1084,7 +1087,7 @@ int readFromFilenodeOClass(char *nodefileType,char *filename,char *readType)
         if (!fp)
         {
 #ifdef EN
-            printf("\nReading Datafile<%s> FAIL, please Checkout pdu.ini  \n",COLOR_ERROR,filename,C_RESET);
+            printf("%s\nReading Datafile<%s> FAIL, please Checkout pdu.ini\n%s", COLOR_ERROR, filename, C_RESET);
 #else
             printf("\n%s数据文件 <%s> 读取失败, 请检查 pdu.ini%s  \n",COLOR_ERROR,filename,C_RESET);
 #endif
@@ -1279,8 +1282,9 @@ void bootstrap_abnormal(){
             fileType="b";
             char *baseFilenodePath=NULL;
             baseFilenodePath = (char *)malloc(buffer_size);
-            snprintf(baseFilenodePath, 200,  "%s/pg_filenode.map",CUR_DBDIR);            if(!readFromFilenodeOClass(fileType,baseFilenodePath,"pg_class")){
-                ("\n<%s>initialization failed，please check the reason  \n",baseFilenodePath);
+            snprintf(baseFilenodePath, 200, "%s/pg_filenode.map", CUR_DBDIR);
+            if(!readFromFilenodeOClass(fileType,baseFilenodePath,"pg_class")){
+                printf("\n<%s>initialization failed，please check the reason\n", baseFilenodePath);
                 exit(1);
             }
 
@@ -3277,7 +3281,7 @@ int unloadDB(char *databasename){
                 int nNodata=0;
                 for ( i = 0; i < tabSize; i++ ) {
                     char pgFilePath[600]="";
-                    snprintf(pgFilePath, sizeof(pgFilePath), "%s%s%s/%s",CUR_DBDIR,taboid[i].filenode);
+                    snprintf(pgFilePath, sizeof(pgFilePath), "%s/%s", CUR_DBDIR, taboid[i].filenode);
                     initToastId(taboid[i].toastnode);
                     setlogLevel(readItemLog);
                     int readRet = readItems(&taboid[i],pgFilePath,taboid[i].typ,taboid[i].tab,TABLE_BOOTTYPE,logPathSucc,logPathErr);
@@ -3695,7 +3699,7 @@ int getToastHash(FILE *fp,unsigned int blockSize,FILE *destfp,int hundred)
                         break;
                     char destInfo[100]={0};
 
-                    if(toastOid > 0 && chunkId >= 0)
+                    if(toastOid > 0)
                     {
                         snprintf(destInfo, sizeof(destInfo), "%d\t%d\t%d\t%d\t%d\n",toastOid,chunkId,currentBlockNo,itemOffset,hundred);
                         fputs(destInfo,destfp);
@@ -3721,8 +3725,8 @@ static int DecodeToastOid(const char *buffer,unsigned int buff_size,unsigned int
 	buff_size -= delta;
 	buffer = new_buffer;
 
-    if (buff_size < delta + sizeof(Oid))
-        return -1;
+	if (buff_size < delta + sizeof(Oid))
+		return -1;
 
 	*result = *(Oid *)buffer;
 	*processed_size = sizeof(Oid) + delta;
@@ -3740,8 +3744,8 @@ int ToastChunkforOid(const char *tuple_data,unsigned int tuple_size,uint32 *chun
 	Oid toastread=0;
 	ret = DecodeToastOid(data, size, &processed_size, &toastread);
 
-    if(ret == -1)
-        return -1;
+	if(ret == -1)
+		return -1;
 
 	*toastoid = toastread;
 	size -= processed_size;
@@ -3749,9 +3753,10 @@ int ToastChunkforOid(const char *tuple_data,unsigned int tuple_size,uint32 *chun
 
 	ret = DecodeToastOid(data, size, &processed_size, chunk_id);
 
-    if(*chunk_id > 10000)
-        return -1;
+	if(*chunk_id > 10000)
+		return -1;
 
+	return 0;
 }
 
 int initToastHash(char *CUR_DB,char *toastnode)
@@ -4088,7 +4093,7 @@ void setTime(char *third,char *fourth,int flag){
         #ifdef CN
         printf("%s事务号 恢复模式下不设置起始时间\n%s",COLOR_ERROR,C_RESET);
         #else
-        printf("%sstarttime and endtime are not set under Tx restore mode.\n",COLOR_ERROR,C_RESET);
+        printf("%sstarttime and endtime are not set under Tx restore mode.\n%s", COLOR_ERROR, C_RESET);
         #endif
         return;
     }
@@ -4326,14 +4331,14 @@ void SHOW_PARAM()
     printf("%s\t  ----------------------DropScan----------------------%s\n",COLOR_helpRestore,C_RESET);
 
     char dsoffstr[50]={0};
-    snprintf(dsoffstr, sizeof(dsoffstr), "              %lld",dropScanSrtOff);
+    snprintf(dsoffstr, sizeof(dsoffstr), "              %ld", (long) dropScanSrtOff);
     printfParam("dsoff(DropScan startOffset)",dsoffstr);
 
-    char blkintvalStr[10]={0};
+    char blkintvalStr[50]={0};
     snprintf(blkintvalStr, sizeof(blkintvalStr), "                        %d",blkInterval);
-    printfParam("blkiter(Block Intervals)",dsoffstr);
+    printfParam("blkiter(Block Intervals)",blkintvalStr);
 
-    char itmsPerCsvStr[10]={0};
+    char itmsPerCsvStr[50]={0};
     snprintf(itmsPerCsvStr, sizeof(itmsPerCsvStr), "              %d",itemspercsv);
     printfParam("itmpcsv(Items Per Csv)",itmsPerCsvStr);
     char *isoModeStr= isoMode ? "              on":"              off";
@@ -4486,6 +4491,7 @@ void RESET_PARAM(char *former,char *latter,char *third)
             #else
             snprintf(resStr, sizeof(resStr), "%s","deleted");
             #endif
+            /* fall through */
         case 10:
             dropScanSrtOff = 0;
             break;

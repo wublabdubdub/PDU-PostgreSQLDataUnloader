@@ -87,9 +87,6 @@ typedef void (*WALSegmentCloseCB) (XLogReaderState *xlogreader);
 			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId(wal_segsz_bytes)))
 
 
-#define XLogRecMaxBlockId(decoder) ((decoder)->record->max_block_id)
-
-
 #define XLogSegNoOffsetToRecPtr(segno, offset, wal_segsz_bytes, dest) \
 		(dest) = (segno) * (wal_segsz_bytes) + (offset)
 

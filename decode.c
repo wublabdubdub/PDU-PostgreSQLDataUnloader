@@ -46,6 +46,17 @@ static int serializeInt16(const char *src, unsigned int avail, unsigned int *use
 static int serializeInt32(const char *src, unsigned int avail, unsigned int *used);
 static int serializeUInt32(const char *src, unsigned int avail, unsigned int *used);
 static int serializeInt64(const char *src, unsigned int avail, unsigned int *used);
+static int uuid_output(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
+static int name_output(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
+static int bool_output(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
+static int decode_macaddr(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
+static int decode_bit(const char *bit_data, unsigned int data_capacity, unsigned int *size_read);
+static int No_op(const char *unused_data, unsigned int remaining_bytes, unsigned int *skipped);
+static int dissectVarlena(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes, int (*xman)(const char *, int));
+static int dissectVarlenaText(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes, int (*xman)(const char *, int));
+static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_size,int (*xman)(const char *, int));
+static int extractToastedPayloadDs(const char *input, unsigned int input_len, unsigned int *consumed, int (*emit_value)(const char *, int));
+static int UnpackToastPayload(const char *packed, int32 packed_len, int (*consumer)(const char *, int));
 
 static int serializeFloat32(const char *src, unsigned int avail, unsigned int *used);
 static int serializeFloat64(const char *src, unsigned int avail, unsigned int *used);
@@ -813,7 +824,7 @@ serializeInt32(const char *src, unsigned int avail, unsigned int *used)
 	*cursor = '\0';
 
 	signBit = (rawValue < 0);
-	magnitude = signBit ? (uint32)(-(int64)rawValue) : (uint32)rawValue;
+	magnitude = signBit ? (uint32)(-(int64) rawValue) : (uint32) rawValue;
 
 	if (magnitude == 0) {
 		*--cursor = '0';
@@ -863,7 +874,6 @@ serializeUInt32(const char *src, unsigned int avail, unsigned int *used)
 	char repr[16];
 	char *cursor;
 	uint32 magnitude;
-	bool signBit;
 
 	if (avail < gap)
 		return PARSE_ERR_ALIGNMENT;
@@ -879,8 +889,7 @@ serializeUInt32(const char *src, unsigned int avail, unsigned int *used)
 	cursor = repr + sizeof(repr) - 1;
 	*cursor = '\0';
 
-	signBit = (rawValue < 0);
-	magnitude = signBit ? (uint32)(-(int64)rawValue) : (uint32)rawValue;
+	magnitude = rawValue;
 
 	if (magnitude == 0) {
 		*--cursor = '0';
@@ -898,9 +907,6 @@ serializeUInt32(const char *src, unsigned int avail, unsigned int *used)
 			*--cursor = '0' + magnitude;
 		}
 	}
-
-	if (signBit)
-		*--cursor = '-';
 
 	emitFieldValue(cursor);
 	*used = sizeof(uint32) + gap;
@@ -2512,7 +2518,7 @@ int assembleToastByIndex(Oid toastOid,unsigned int toastExternalSize,char *toast
 			}
 
 			if (fseek(fp, blkoff, SEEK_SET) != 0) {
-				fprintf(stderr, "fseek failed for block %lu\n", elem->blk);
+				fprintf(stderr, "fseek failed for block %u\n", elem->blk);
 				continue;
 			}
 
@@ -3776,7 +3782,7 @@ char* xmanDecodeDrop(decodeFunc *array2Process,const char *tupleData, unsigned i
 	{
 		int	res;
 		int padding=0;
-		int AttrSize = 0;
+		unsigned int AttrSize = 0;
 
 		if ((header->t_infomask & HEAP_HASNULL) && att_isnull(curr_attr, header->t_bits))
 		{
@@ -4337,4 +4343,3 @@ static int decode_bit(const char *bit_data, unsigned int data_capacity, unsigned
 	emitFieldValue(output_str);
 	return 0;
 }
-

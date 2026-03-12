@@ -217,6 +217,8 @@ int createDir(char *dirname)
         #endif
         return 0;
     }
+
+    return 0;
 }
 
 int removeEntry(const char *path) {
@@ -933,7 +935,7 @@ void harray_expand(harray *array,int flag, size_t newsize) {
             else if ( flag == HARRAYLLINT){
                 uint64 *a = (uint64 *)current->data;
                 char val2pass[100]={0};
-                snprintf(val2pass, sizeof(val2pass), "%" PRIu64, *a);
+                snprintf(val2pass, sizeof(val2pass), "%llu", (unsigned long long) *a);
                 new_index = hash(array, val2pass,newsize);
             }
             else if ( flag == HARRAYDEL){
@@ -961,7 +963,7 @@ void harray_expand(harray *array,int flag, size_t newsize) {
 int harray_search(harray* harray, int flag , uint64 val)
 {
     char valStr[1000];
-    snprintf(valStr, sizeof(valStr), "%lld",val);
+    snprintf(valStr, sizeof(valStr), "%llu", (unsigned long long) val);
     unsigned int index = hash(harray, valStr,harray->allocated);
     Node* node = harray->table[index];
     int found=0;
@@ -1009,7 +1011,7 @@ int harray_search(harray* harray, int flag , uint64 val)
 void *harray_get(harray* harray, int flag , uint32 val)
 {
     char valStr[1000];
-    snprintf(valStr, sizeof(valStr), "%lld",val);
+    snprintf(valStr, sizeof(valStr), "%u", val);
     unsigned int index = hash(harray, valStr,harray->allocated);
     Node* node = harray->table[index];
     int found=0;
@@ -1102,9 +1104,10 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
                         strcat(attrStr,",");
                         strcat(typStr,tempArray[x].typid);
                         strcat(typStr,",");
-                        if(!isdrop)
+                        if(!isdrop) {
                             strcat(modStr,tempArray[x].attrmod);
                             strcat(modStr,",");
+                        }
                         strcat(lenStr,tempArray[x].attlen);
                         strcat(lenStr,",");
                         strcat(alignStr,tempArray[x].attalign);
@@ -1617,7 +1620,7 @@ void cleanPadding(const char *buffer, unsigned int *buff_size,int *padding,int *
 			return;
 
 		*buff_size = *buff_size -1;
-		*buffer++;
+		buffer++;
         *temppadding = *temppadding +1;
 
 	}
@@ -2288,8 +2291,6 @@ void mergeToast(char *PATH,char *toastfile)
 
     int* result = findMinMaxNumbers(PATH);
 
-    DIR *dir;
-    struct dirent *entry;
     FILE *outputFile, *inputFile;
     char buffer[BLCKSZ];
     size_t bytesRead;
@@ -2302,7 +2303,6 @@ void mergeToast(char *PATH,char *toastfile)
     outputFile = fopen(toastPATH, "wb");
     if (outputFile == NULL) {
         perror("Failed to openOutputFile");
-        closedir(dir);
         return;
     }
     for (int x=0;x<result[1]+1;x++){
@@ -2592,7 +2592,8 @@ bool compareHexStrings(const char *a, const char *b) {
 bool lsnIsReached(uint64 pre,uint64 suff,char *endLSN)
 {
     char currentLSN[50];
-	snprintf(currentLSN, sizeof(currentLSN), "%X/%08X",LSN_FORMAT_ARGS(pre),LSN_FORMAT_ARGS(suff));
+	(void) suff;
+	snprintf(currentLSN, sizeof(currentLSN), "%X/%08X", LSN_FORMAT_ARGS(pre));
 	int lsnReached = compareHexStrings(currentLSN,endLSN);
     bool ret = lsnReached ? true : false;
     return ret;
@@ -2942,12 +2943,12 @@ int dropFileRename(dropContext *dc)
 
     char lastRestoreFile[MAXPGPATH]={0};
     char newRestoreFile[MAXPGPATH]={0};
-    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/%lld.csv",csvPrefix,currSrtOffset);
+    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/%ld.csv", csvPrefix, (long) currSrtOffset);
     if(BadPct){
-        snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/%d%%BAD_%s_%lld_%dblks_%ditems.csv",csvPrefix,BadPct,time_str,currSrtOffset,currBlks,currItems);
+        snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/%d%%BAD_%s_%ld_%dblks_%ditems.csv", csvPrefix, BadPct, time_str, (long) currSrtOffset, currBlks, currItems);
     }
     else{
-        snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/%s_%lld_%dblks_%ditems.csv",csvPrefix,time_str,currSrtOffset,currBlks,currItems);
+        snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/%s_%ld_%dblks_%ditems.csv", csvPrefix, time_str, (long) currSrtOffset, currBlks, currItems);
     }
     if (access(lastRestoreFile, F_OK) != 0) {
         return FAILURE_RET;
@@ -2973,8 +2974,8 @@ int dropFileRenameforToast(char *csvPrefix,off_t currSrtOffset,int currBlks,int 
 
     char lastRestoreFile[MAXPGPATH]={0};
     char newRestoreFile[MAXPGPATH]={0};
-    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/.toast/%lld",csvPrefix,currSrtOffset);
-    snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/.toast/%s-%lld-%dblks-%ditems",csvPrefix,time_str,currSrtOffset,currBlks,currItems);
+    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/.toast/%ld", csvPrefix, (long) currSrtOffset);
+    snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/.toast/%s-%ld-%dblks-%ditems", csvPrefix, time_str, (long) currSrtOffset, currBlks, currItems);
     if (access(lastRestoreFile, F_OK) != 0) {
         return FAILURE_RET;
     }
@@ -2983,6 +2984,12 @@ int dropFileRenameforToast(char *csvPrefix,off_t currSrtOffset,int currBlks,int 
     }
     return SUCCESS_RET;
     #endif
+
+    (void) csvPrefix;
+    (void) currSrtOffset;
+    (void) currBlks;
+    (void) currItems;
+    return SUCCESS_RET;
 }
 
 int dropFileRenameforFinal(dropContext *dc)
@@ -3003,8 +3010,8 @@ int dropFileRenameforFinal(dropContext *dc)
 
     char lastRestoreFile[MAXPGPATH]={0};
     char newRestoreFile[MAXPGPATH]={0};
-    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/Toast.csv",csvPrefix);
-    snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/TOAST_%lld_%dblks_%drecords.csv",csvPrefix,time_str,currBlks,currItems);
+    snprintf(lastRestoreFile, sizeof(lastRestoreFile), "%s/Toast.csv", csvPrefix);
+    snprintf(newRestoreFile, sizeof(newRestoreFile), "%s/TOAST_%s_%dblks_%drecords.csv", csvPrefix, time_str, currBlks, currItems);
     if (access(lastRestoreFile, F_OK) != 0) {
         return FAILURE_RET;
     }
@@ -3659,6 +3666,8 @@ int getDecodeFunctions(const char *typ,decodeFuncs attr2Process[MAX_COL_NUM])
     for (int i = 0; i < MAX_COL_NUM; i++) {
         free(attrChars[i]);
     }
+
+    return SUCCESS_RET;
 }
 
 systemDropContext* initSystemDropContext(char *flag)

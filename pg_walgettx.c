@@ -28,10 +28,13 @@ void PageInit(Page page, Size pageSize, Size specialSize);
 void fix_infomask_from_infobits(uint8 infobits, uint16 *infomask, uint16 *infomask2);
 void PageTruncateLinePointerArray(Page page);
 bool RestoreBlockImage(XLogReaderState *record, uint8 block_id, char *page);
+void ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *parsed);
 void xact_desc_commit(TimestampTz *TimeFromRecord, Oid *datafileOid, Oid *toastOid, xl_xact_commit *xlrec, uint8 info);
 OffsetNumber PageAddItemExtended(Page page, Item item, Size size, OffsetNumber offsetNumber, int flags);
 int XLogRecordRedoDropFPW(systemDropContext *sdc, XLogReaderState *record);
 void mergeTxDelElems(parray *TxTime_parray);
+static int GetTransactionSubxids(XLogReaderState *record, TransactionId **subxids);
+static void FinalizeMatchedTransaction(TransactionId tx, const char *LSN, TimestampTz txTime);
 
 char lsn[30];
 int FPWLoc = 0;
@@ -3719,9 +3722,11 @@ void XLogScanRecordForDisplay(XLogDumpConfig *config, XLogReaderState *record,pa
 	#endif
 
 	char LSN[50];
-	snprintf(LSN, sizeof(LSN), "%X/%08X",LSN_FORMAT_ARGS(record->ReadRecPtr),LSN_FORMAT_ARGS(xl_prev));
+	snprintf(LSN, sizeof(LSN), "%X/%08X", LSN_FORMAT_ARGS(record->ReadRecPtr));
 
 	TransactionId tx = XLogRecGetXid(record);
+	TransactionId *subxids = NULL;
+	int nsubxids = 0;
 
 	Oid *datafileOid=NULL;
 	Oid *toastOid=NULL;
@@ -3769,23 +3774,74 @@ void XLogScanRecordForDisplay(XLogDumpConfig *config, XLogReaderState *record,pa
 				}
 			}
 			else if(delOrDrop == DEL && *TimeFromRecord != 0){
-				int txFound = harray_search(delElems,HARRAYDEL,tx);
-				if(txFound){
-					parray_append(Txs,(void *)(intptr_t)tx);
-					DELstruct *elem = harray_get(delElems,HARRAYDEL,tx);
-					snprintf(elem->endLSN, sizeof(elem->endLSN), "%s", LSN);
-					snprintf(elem->endLSNforTOAST, sizeof(elem->endLSNforTOAST), "%s", LSN);
-					snprintf(elem->endwal, sizeof(elem->endwal), "%s", currWalName);
-					elem->txtime = *TimeFromRecord;
+				nsubxids = GetTransactionSubxids(record, &subxids);
+				if (nsubxids > 0) {
+					for (int i = 0; i < nsubxids; i++) {
+						FinalizeMatchedTransaction(subxids[i], LSN, *TimeFromRecord);
+					}
 
-					snprintf(elemforTime->endLSN, sizeof(elemforTime->endLSN), "%s", elem->endLSN);
-					snprintf(elemforTime->endLSNforTOAST, sizeof(elemforTime->endLSNforTOAST), "%s", elem->endLSNforTOAST);
-					snprintf(elemforTime->endwal, sizeof(elemforTime->endwal), "%s", elem->endwal);
-					elemforTime->txtime = elem->txtime;
-					elemforTime->delCount+=elem->delCount;
+					/*
+					 * 顶层事务本身也可能直接持有目标对象的 WAL，额外补一遍，
+					 * 避免存在 subxacts 时漏掉顶层 xid。
+					 */
+					FinalizeMatchedTransaction(tx, LSN, *TimeFromRecord);
+				}
+				else {
+					FinalizeMatchedTransaction(tx, LSN, *TimeFromRecord);
 				}
 			}
 		}
+	}
+}
+
+static int
+GetTransactionSubxids(XLogReaderState *record, TransactionId **subxids)
+{
+	char			   *rec;
+	uint8				info;
+	uint8				opcode;
+	xl_xact_commit	   *xlrec;
+	xl_xact_parsed_commit parsed;
+
+	*subxids = NULL;
+
+	if (XLogRecGetRmid(record) != TRANSACTION_redo)
+		return 0;
+
+	info = XLogRecGetInfo(record);
+	opcode = info & XLOG_XACT_OPMASK;
+	if (opcode != XLOG_XACT_COMMIT && opcode != XLOG_XACT_COMMIT_PREPARED)
+		return 0;
+
+	rec = XLogRecGetData(record);
+	xlrec = (xl_xact_commit *) rec;
+	ParseCommitRecord(info, xlrec, &parsed);
+	*subxids = parsed.subxacts;
+
+	return parsed.nsubxacts;
+}
+
+static void
+FinalizeMatchedTransaction(TransactionId tx, const char *LSN, TimestampTz txTime)
+{
+	int txFound = harray_search(delElems, HARRAYDEL, tx);
+
+	if (txFound)
+	{
+		parray_append(Txs, (void *)(intptr_t) tx);
+
+		DELstruct *elem = harray_get(delElems, HARRAYDEL, tx);
+
+		snprintf(elem->endLSN, sizeof(elem->endLSN), "%s", LSN);
+		snprintf(elem->endLSNforTOAST, sizeof(elem->endLSNforTOAST), "%s", LSN);
+		snprintf(elem->endwal, sizeof(elem->endwal), "%s", currWalName);
+		elem->txtime = txTime;
+
+		snprintf(elemforTime->endLSN, sizeof(elemforTime->endLSN), "%s", elem->endLSN);
+		snprintf(elemforTime->endLSNforTOAST, sizeof(elemforTime->endLSNforTOAST), "%s", elem->endLSNforTOAST);
+		snprintf(elemforTime->endwal, sizeof(elemforTime->endwal), "%s", elem->endwal);
+		elemforTime->txtime = elem->txtime;
+		elemforTime->delCount += elem->delCount;
 	}
 }
 

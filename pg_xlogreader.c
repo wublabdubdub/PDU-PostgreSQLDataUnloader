@@ -171,9 +171,10 @@ bool ValidXLogRecordHeader(XLogReaderState *state, XLogRecPtr RecPtr,
 {
 	if (record->xl_tot_len < SizeOfXLogRecord)
 	{
-		printf("read until FINAL WAL SEGMENT: %X/%X\n",
+		printf("read until FINAL WAL SEGMENT: %X/%X (min %u, got %u)\n",
 							  LSN_FORMAT_ARGS(RecPtr),
-							  (uint32) SizeOfXLogRecord, record->xl_tot_len);
+							  (uint32) SizeOfXLogRecord,
+							  record->xl_tot_len);
 		return false;
 	}
 	// 						  "invalid resource manager ID %u at %X/%X",
@@ -633,7 +634,7 @@ uintptr_t XLogRecGetBlockData(XLogReaderState *record, uint8 block_id, Size *len
 	DecodedBkpBlock *bkpb;
 
 	if (!record->blocks[block_id].in_use)
-		return NULL;
+		return 0;
 
 	bkpb = &record->blocks[block_id];
 
@@ -641,7 +642,7 @@ uintptr_t XLogRecGetBlockData(XLogReaderState *record, uint8 block_id, Size *len
 	{
 		if (len)
 			*len = 0;
-		return NULL;
+		return 0;
 	}
 	else
 	{

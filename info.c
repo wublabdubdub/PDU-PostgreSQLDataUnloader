@@ -32,17 +32,13 @@ void cprDeclaration(void)
 
     char linetitle[50];
     char line1[100];
-    char line2[100];
-    char line3[100];
-    char line4[100];
-    char line5[100];
 
 
     snprintf(DBTYPE, sizeof(DBTYPE), "PDU: PostgreSQL Data Unloader           ");
     snprintf(SUPPORTVER, sizeof(SUPPORTVER), "  • PostgreSQL %d", PG_VERSION_NUM);
 
     snprintf(linetitle, sizeof(linetitle), "COMMUNITY VERSION");
-    snprintf(line1, sizeof(line1), "• Licensed to everyone%-18s");
+    snprintf(line1, sizeof(line1), "• Licensed to everyone");
 
     printf("%s╔══════════════════════════════════════════════════════╗%s\n",COLOR_COPYRIGHT,C_RESET);
     printf("%s║  Copyright 2024-2025 ZhangChen. All rights reserved  ║%s\n",COLOR_COPYRIGHT,C_RESET);
@@ -242,9 +238,9 @@ void infoBootstrap(int stage,char *pgDatabaseFile,char *CUR_DB,char *pgSchemaFil
             break;
         case 4:
             #ifdef EN
-            printf("%s%s%s%sSchema:\n",C_WHITE2,bootPadding,bootPadding,bootPadding,C_RESET);
+            printf("%s%s%s%sSchema:\n%s", C_WHITE2, bootPadding, bootPadding, bootPadding, C_RESET);
             #else
-            printf("%s%s%s%s模式:\n",C_WHITE2,bootPadding,bootPadding,bootPadding,C_RESET);
+            printf("%s%s%s%s模式:\n%s", C_WHITE2, bootPadding, bootPadding, bootPadding, C_RESET);
             #endif
             break;
         case 5:
@@ -284,7 +280,7 @@ void infoUnlodResult(char *tabname,char *oidpath,int nPages,int nTotal,int nItem
     printf("%s Table %s(%s)%s\n", COLOR_UNLOAD,tabname,oidpath,C_RESET);
     printf("%s ● Pages: %-10d     ● %d Records in total%s\n", COLOR_UNLOAD,nPages,nTotal,C_RESET);
     printf("%s ● Success: %s%-10d%s   ● Faliure: %s%d%s%s\n", COLOR_UNLOAD,COLOR_SUCC,nItemsSucc,C_RESET,COLOR_ERROR,nItemsErr,C_RESET, C_RESET);
-    printf("%s ● File Path: %s\n", COLOR_UNLOAD,csvpath, C_RESET);
+    printf("%s ● File Path: %s%s\n", COLOR_UNLOAD, csvpath, C_RESET);
     printf("%s└─────────────────────────────────────────────────────────┘%s\n", COLOR_UNLOAD, C_RESET);
     #endif
 }
@@ -556,7 +552,7 @@ void infoRestoreResult(char *tabname,int nTotal,int nItemsSucc,int nItemsErr,int
         printf("%s ● Success: %s%-10d%s ● Failure: %s%d%s%s\n", COLOR_UNLOAD,COLOR_SUCC,nItemsSucc,C_RESET,COLOR_ERROR,nItemsErr,C_RESET, C_RESET);
     else if (resTyp_there == UPDATEtyp)
         printf("%s ● Success:%s %s%-10d%s %s● Same Values for Updates:%s %s%d%s %s● Failure:%s %s%d%s\n",COLOR_UNLOAD,C_RESET,COLOR_SUCC,nItemsSucc,C_RESET,COLOR_UNLOAD,C_RESET,COLOR_SUCC,FPIUpdateSame,C_RESET,COLOR_UNLOAD,C_RESET,COLOR_ERROR,nItemsErr,C_RESET);
-    printf("%s ● File Path: %s\n", COLOR_UNLOAD,csvpath, C_RESET);
+    printf("%s ● File Path: %s%s\n", COLOR_UNLOAD, csvpath, C_RESET);
     printf("%s└───────────────────────────────────────────────────────────────┘%s\n", COLOR_UNLOAD, C_RESET);
     #endif
 }
@@ -725,12 +721,12 @@ void infoPhysicalBlkHeader(char *filename,uint32 st_size,int flag)
     #else
     if(flag == 0){
         printf("%sDatafile: %s%s\n",COLOR_UNLOAD,filename,C_RESET);
-        printf("%sDatafile size: %ld bytes%s\n",COLOR_UNLOAD, st_size,C_RESET);
+        printf("%sDatafile size: %u bytes%s\n", COLOR_UNLOAD, st_size, C_RESET);
         printf("%sPhysical block distribution:%s\n",COLOR_UNLOAD,C_RESET);
     }
     else{
         printf("%sTOAST file: %s%s\n",COLOR_UNLOAD, filename,C_RESET);
-        printf("%sTOAST file size: %ld bytes%s\n",COLOR_UNLOAD, st_size,C_RESET);
+        printf("%sTOAST file size: %u bytes%s\n", COLOR_UNLOAD, st_size, C_RESET);
         printf("%sPhysical block distribution:\n%s",COLOR_UNLOAD,C_RESET);
     }
     #endif
@@ -827,7 +823,7 @@ void infoDsIdxInfoHeader()
     #else
     printf("\n%s▌ Starting index retrieval%s\n", COLOR_SUCC, C_RESET);
     printf("%s┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐%s\n", C_GREY2, C_RESET);
-    printf("%s ● Undropped data pages will be excluded during index retrieval\n", COLOR_WARNING,C_RESET);
+    printf("%s ● Undropped data pages will be excluded during index retrieval%s\n", COLOR_WARNING, C_RESET);
     printf("%s└─────────────────────────────────────────────────────────────────────────────────────────────────────┘%s\n", C_GREY2, C_RESET);
     #endif
 }

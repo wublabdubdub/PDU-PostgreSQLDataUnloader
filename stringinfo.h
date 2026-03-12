@@ -26,7 +26,11 @@
 #define STRINGINFO_H
 
 
-#define pg_attribute_printf(f,a) __attribute__((format(PG_PRINTF_ATTRIBUTE, f, a)))
+#if defined(__GNUC__) || defined(__clang__)
+#define pg_attribute_printf(f,a) __attribute__((format(printf, f, a)))
+#else
+#define pg_attribute_printf(f,a)
+#endif
 
 /*-------------------------
  * StringInfoData holds information about an extensible string.

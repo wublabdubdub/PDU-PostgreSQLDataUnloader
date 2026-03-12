@@ -268,31 +268,6 @@ int assembleToastByIndex(Oid toastOid,unsigned int toastExternalSize,char *toast
 
 void setToastHash(harray *setting);
 
-
-static int UnpackToastPayload(const char *packed, int32 packed_len, int (*consumer)(const char *, int));
-
-static int uuid_output(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
-
-static int name_output(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
-
-static int bool_output(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
-
-static int decode_macaddr(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes);
-
-static int decode_bit(const char *bit_data, unsigned int data_capacity, unsigned int *size_read);
-
-static int No_op(const char *unused_data, unsigned int remaining_bytes, unsigned int *skipped);
-
-static int dissectVarlena(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes, int (*xman)(const char *, int));
-
-static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_size,int (*xman)(const char *, int));
-
-static int extractToastedPayloadDs(const char *input, unsigned int input_len, unsigned int *consumed, int (*emit_value)(const char *, int));
-
-static int UnpackToastPayload(const char *packed, int32 packed_len, int (*consumer)(const char *, int));
-
-static int dissectVarlenaText(const char *input_data, unsigned int data_length, unsigned int *consumed_bytes, int (*xman)(const char *, int));
-
 void freeOldParray();
 
 

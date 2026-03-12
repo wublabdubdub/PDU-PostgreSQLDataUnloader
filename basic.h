@@ -826,7 +826,7 @@ do { \
  * Block checksum algorithm.  The page must be adequately aligned
  * (at least on 4-byte boundary).
  */
-static uint32
+static inline uint32
 pg_checksum_block(const PGChecksummablePage *page)
 {
 	uint32		sums[N_SUMS];
@@ -1017,6 +1017,7 @@ typedef struct
 #define VARBIT_CORRECTLY_PADDED(vb) \
 	do { \
 		int32	pad_ = VARBITPAD(vb); \
+		(void) pad_; \
 		Assert(pad_ >= 0 && pad_ < BITS_PER_BYTE); \
 		Assert(pad_ == 0 || \
 			   (*(VARBITS(vb) + VARBITBYTES(vb) - 1) & ~(BITMASK << pad_)) == 0); \

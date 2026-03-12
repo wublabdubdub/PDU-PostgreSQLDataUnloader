@@ -41,14 +41,22 @@ static inline void *pdu_realloc(void *old, size_t size)
 
 static inline char *pdu_strdup(const char *s)
 {
+    size_t len;
+    char *ptr;
+
     if (s == NULL) {
         fprintf(stderr, "pdu_strdup: NULL input\n");
         return NULL;
     }
-    char *ptr = strdup(s);
+
+    len = strlen(s) + 1;
+    ptr = malloc(len);
     if (ptr == NULL) {
         fprintf(stderr, "pdu_strdup: out of memory\n");
+        return NULL;
     }
+
+    memcpy(ptr, s, len);
     return ptr;
 }
 
