@@ -187,6 +187,21 @@ int dosize = 0;
 char *bootPadding="  ";
 char *space="      ";
 
+static void
+set_cur_dbdir(const char *path)
+{
+    if (CUR_DBDIR == NULL) {
+        return;
+    }
+
+    if (path == NULL) {
+        CUR_DBDIR[0] = '\0';
+        return;
+    }
+
+    snprintf(CUR_DBDIR, MAXPGPATH, "%s", path);
+}
+
 decodeFunc attr2Process[MAX_COL_NUM] = {NULL};
 commaSeperFunc seperFunc2Use=NULL;
 
@@ -1255,7 +1270,7 @@ void bootstrap_abnormal(){
         if ( (strncmp(databaseoid[i].database,"template",8) != 0) &&
              (strcmp(databaseoid[i].database,"restore") != 0) &&
              (strcmp(databaseoid[i].database,"security") != 0)){
-            CUR_DBDIR=databaseoid[i].dbpath;
+            set_cur_dbdir(databaseoid[i].dbpath);
             snprintf(CUR_DB, 100,  "%s", databaseoid[i].database);            infoBootstrap(2,"",CUR_DB,"","",0,"",0,"",0);
 
             removeDir(CUR_DB);
@@ -1465,7 +1480,7 @@ void bootstrap(){
         if ( (strncmp(databaseoid[i].database,"template",8) != 0) &&
              (strcmp(databaseoid[i].database,"restore") != 0) &&
              (strcmp(databaseoid[i].database,"security") != 0)){
-            CUR_DBDIR=databaseoid[i].dbpath;
+            set_cur_dbdir(databaseoid[i].dbpath);
             snprintf(CUR_DB, 100,  "%s", databaseoid[i].database);            infoBootstrap(2,"",CUR_DB,"","",0,"",0,"",0);
 
             removeDir(CUR_DB);
@@ -1753,7 +1768,7 @@ void useDB(char *former,char *latter){
     int i;
     for ( i = 0; i < dosize; i++ ) {
         if ( strcmp(latter,databaseoid[i].database) == 0 ){
-            snprintf(CUR_DB, 100,  "%s", databaseoid[i].database);            CUR_DBDIR=databaseoid[i].dbpath;
+            snprintf(CUR_DB, 100,  "%s", databaseoid[i].database);            set_cur_dbdir(databaseoid[i].dbpath);
             isRightDB=1;
         };
     }
@@ -1769,7 +1784,7 @@ void useDB(char *former,char *latter){
         snprintf(DBSchemaFile, sizeof(DBSchemaFile), "%s/%s/%s", CUR_DB, "meta",SCHEMA_BOOT);
         schoid=bootSCHStruct(DBSchemaFile);
         if(schoid == NULL){
-            snprintf(CUR_DB, 100,  "%s", "PDU");            CUR_DBDIR=NULL;
+            snprintf(CUR_DB, 100,  "%s", "PDU");            set_cur_dbdir(NULL);
             return;
         }
         schemasize=getLineNum(DBSchemaFile);
@@ -1782,8 +1797,7 @@ void useDB(char *former,char *latter){
             isSingleDB = 0;
         }
         else if(strncmp(CUR_DBDIR,"xman",4) == 0){
-            CUR_DBDIR=CUR_DBDIR+4;
-            snprintf(CURDBFullPath, sizeof(CURDBFullPath), "%s",CUR_DBDIR);
+            snprintf(CURDBFullPath, sizeof(CURDBFullPath), "%s", CUR_DBDIR + 4);
             initCURDBPath(CURDBFullPath);
             isSingleDB =1;
         }
@@ -3586,7 +3600,8 @@ int getInit(){
 
     CUR_SCH = malloc(100);
     CUR_DB = malloc(100);
-    snprintf(CUR_SCH, 100, "%s", "public");    snprintf(CUR_DB, 100, "%s", "PDU");    SrtTime=(TimestampTz*)malloc(sizeof(TimestampTz));
+    CUR_DBDIR = malloc(MAXPGPATH);
+    snprintf(CUR_SCH, 100, "%s", "public");    snprintf(CUR_DB, 100, "%s", "PDU");    CUR_DBDIR[0] = '\0';    SrtTime=(TimestampTz*)malloc(sizeof(TimestampTz));
     EndTime=(TimestampTz*)malloc(sizeof(TimestampTz));
     *SrtTime=0;
     *EndTime=0;

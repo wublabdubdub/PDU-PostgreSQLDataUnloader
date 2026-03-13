@@ -2201,7 +2201,7 @@ emitEncodedValue(const char *str, int orig_len)
 		fprintf(stderr, "emitEncodedValue: invalid length %d\n", orig_len);
 		return -1;
 	}
-    char *tmp_buff = pdu_malloc(2 * (size_t)orig_len + 1);
+    char *tmp_buff = pdu_malloc(2 * (size_t)orig_len + 3);
 	if (tmp_buff == NULL)
 	{
 		return -1;

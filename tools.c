@@ -1641,6 +1641,7 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
 {
     int prefixsize = strlen(tabname)+50;
     int suffixsize = 10;
+    int sameprefixsize = 10;
     int isSET = 0;
     int setConfronted = 1;//是否当前SET后面还没有值
     int setConfrontedforSame = 1;//是否当前SET后面还没有值,给sameprefix用的
@@ -1652,7 +1653,12 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
         if(strcmp(old,new) != 0){
             prefixsize += strlen(oneDesc->attname);
             prefixsize += strlen(old);
+            prefixsize += 10;
         }
+
+        sameprefixsize += strlen(old);
+        sameprefixsize += strlen(oneDesc->attname);
+        sameprefixsize += 10;
 
         suffixsize += strlen(new);
         suffixsize += strlen(oneDesc->attname);
@@ -1668,14 +1674,14 @@ char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *
         free(prefix);
         return NULL;
     }
-    char *samePrefix =(char*)pdu_malloc(sizeof(char)*suffixsize);//update 表名 set 列名=旧值
+    char *samePrefix =(char*)pdu_malloc(sizeof(char)*sameprefixsize);//update 表名 set 列名=旧值
                                                             //固定拼接一次旧值，以防相同的情况下没有数据
     if (samePrefix == NULL) {
         free(prefix);
         free(suffix);
         return NULL;
     }
-    memset(samePrefix,0,suffixsize);
+    memset(samePrefix,0,sameprefixsize);
     snprintf(prefix, 10240,  "UPDATE %s SET ",tabname);    snprintf(suffix, 10240,  " WHERE ");
     for(int i=0;i<parray_num(newxman_arr);i++){
         char *new = parray_get(newxman_arr,i);
