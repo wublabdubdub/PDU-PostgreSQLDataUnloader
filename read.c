@@ -2523,7 +2523,7 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
         }
     }
 
-    if(flag == DELRESTORE){
+    if(flag == DELRESTORE && resTyp != UPDATEtyp){
         pgGetTxforArch(&GetTxRetFromArch,SrtTime,EndTime,archDirFiles,archWaldirNum,
                 start_archfilename,end_archfilename,archivedir,
                 flag,"0","0",toastfile,oldToastfile,tabname,
@@ -2534,6 +2534,9 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
         snprintf(CUR_DBDIR, 1024,  "%s", DBDIRcopy);        int toastInitRet = initToastHash("restore",taboid->toastnode);
         initToastId(taboid->toastnode);
         setToastHash(toastHash);
+    }
+    else if(flag == DELRESTORE && resTyp == UPDATEtyp){
+        setToastHash(NULL);
     }
     pgGetTxforArch(&GetTxRetFromArch,SrtTime,EndTime,archDirFiles,archWaldirNum,
             start_archfilename,end_archfilename,archivedir,

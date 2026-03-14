@@ -273,6 +273,8 @@ void freeOldParray();
 
 void freeNewParray();
 
+void resetUpdateParrays(void);
+
 void initOldParray();
 
 void initNewParray();

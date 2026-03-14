@@ -57,6 +57,7 @@ static int dissectVarlenaText(const char *input_data, unsigned int data_length, 
 static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_size,int (*xman)(const char *, int));
 static int extractToastedPayloadDs(const char *input, unsigned int input_len, unsigned int *consumed, int (*emit_value)(const char *, int));
 static int UnpackToastPayload(const char *packed, int32 packed_len, int (*consumer)(const char *, int));
+static int consumeAlignedOid(const char *raw, unsigned int remaining, unsigned int *consumed, Oid *out_value);
 
 static int serializeFloat32(const char *src, unsigned int avail, unsigned int *used);
 static int serializeFloat64(const char *src, unsigned int avail, unsigned int *used);
@@ -152,14 +153,22 @@ void initOldParray(){
 
 void freeNewParray(){
 	parray_free(xmanNewParray);
+	xmanNewParray = NULL;
 	xmanNewParrayInitDown = false;
 	xmanNewParrayReturn = false;
 }
 
 void freeOldParray(){
 	parray_free(xmanOldParray);
+	xmanOldParray = NULL;
 	xmanOldParrayInitDown = false;
 	xmanOldParrayReturn = false;
+}
+
+void resetUpdateParrays(void)
+{
+	freeOldParray();
+	freeNewParray();
 }
 
 static inline void prepareResultBuffer(void)
@@ -1939,10 +1948,10 @@ dissectVarlena(const char *input_data, unsigned int data_length, unsigned int *c
 			uncompressed_size = VARDATA_COMPRESSED_GET_EXTSIZE(current_pos);
 
 			if (uncompressed_size > sizeof(decompression_storage)) {
-                printf("uncompressed_size is %d BYTES, Can not get into decompression_storage\n",
+				printf("uncompressed_size is %d BYTES, Can not get into decompression_storage\n",
 					   uncompressed_size);
 				*consumed_bytes = skip_bytes + compressed_size;
-				parse_result = 0;
+				parse_result = -1;
 				break;
 			}
 
@@ -1964,7 +1973,7 @@ dissectVarlena(const char *input_data, unsigned int data_length, unsigned int *c
 			if (decomp_status != (int)uncompressed_size || decomp_status < 0) {
 				printf("CORRUPTED DATA,CANCELING DECOMPRESSING\n");
 				*consumed_bytes = skip_bytes + compressed_size;
-				parse_result = 0;
+				parse_result = -1;
 				break;
 			}
 
@@ -2364,7 +2373,7 @@ print_tens:
 
 static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_size,int (*xman)(const char *, int))
 {
-	int		result = 0;
+	int		result = -1;
 
 	if (VARATT_IS_EXTERNAL_ONDISK(buffer))
 	{
@@ -2436,8 +2445,6 @@ static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_s
 		{
 			if (VARATT_EXTERNAL_IS_COMPRESSED(toast_ptr)){
 				result = UnpackToastPayload(toast_data, toast_ext_size, xman);
-				if(result == -1 && resTyp_decode == UPDATEtyp){
-				}
 			}
 			else{
 				result = xman(toast_data, toast_ext_size);
@@ -2445,6 +2452,7 @@ static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_s
 		}
 		else if(result == FAILURE_RET)
 		{
+			result = -1;
 		}
 		free(toast_data);
 		fclose(toast_rel_fp);
@@ -2459,59 +2467,137 @@ static int DeToast(const char *buffer,unsigned int buff_size,unsigned int* out_s
 
 int assembleToastByIndex(Oid toastOid,unsigned int toastExternalSize,char *toastData,harray *toastHash,char *toastfilePath)
 {
-    unsigned int bytesToFormat;
+	unsigned int bytesToFormat;
 	int blockSize;
 	FILE *fp=NULL;
 
 	int result = FAILURE_RET;
-    char *block = NULL;
-
-	if(toastHash == NULL)
-		return FAILURE_RET;
-
+	char *block = NULL;
 	parray *chunkInfosInner = parray_new();
+	bool ownsChunkInfos = false;
 
-	char toastOidVal[20];
-	snprintf(toastOidVal, sizeof(toastOidVal), "%d",toastOid);
-	unsigned int index = hash(toastHash, toastOidVal, toastHash->allocated);
-	Node* node = toastHash->table[index];
-	while (node != NULL) {
-		chunkInfo *elem1 = (chunkInfo*)node->data;
-		if(elem1->toid == toastOid){
-			parray_append(chunkInfosInner,elem1);
+	if(toastHash != NULL){
+		char toastOidVal[20];
+		snprintf(toastOidVal, sizeof(toastOidVal), "%d",toastOid);
+		unsigned int index = hash(toastHash, toastOidVal, toastHash->allocated);
+		Node* node = toastHash->table[index];
+		while (node != NULL) {
+			chunkInfo *elem1 = (chunkInfo*)node->data;
+			if(elem1->toid == toastOid){
+				parray_append(chunkInfosInner,elem1);
+			}
+			node=node->next;
 		}
-		node=node->next;
 	}
+
 	if(parray_num(chunkInfosInner) == 0){
+		ownsChunkInfos = true;
+		fp = fopen(toastfilePath,"rb");
+		if(!fp){
+			parray_free(chunkInfosInner);
+			printf("can not open %s \n",toastfilePath);
+			return FAILURE_RET;
+		}
+
+		blockSize = determinePageDimension(fp);
+		block = (char *)malloc(blockSize);
+		if (!block)
+		{
+			fclose(fp);
+			parray_free(chunkInfosInner);
+			printf("\nFAILED TO ALLOCATE SIZE OF <%d> BYTES \n",blockSize);
+			return FAILURE_RET;
+		}
+
+		for (BlockNumber blkno = 0; fread(block, 1, blockSize, fp) == (size_t)blockSize; blkno++)
+		{
+			Page page = (Page) block;
+			OffsetNumber maxoff = PageGetMaxOffsetNumber(page);
+
+			for (OffsetNumber offnum = FirstOffsetNumber; offnum <= maxoff; offnum++)
+			{
+				ItemId itemid = PageGetItemId(page, offnum);
+				unsigned int oidConsumed = 0;
+				unsigned int remaining = 0;
+				unsigned int seqSkip = 0;
+				Oid tupleToastOid = InvalidOid;
+				int32 chunkSeq = 0;
+				char *tuple_data;
+				HeapTupleHeader header;
+				const char *attrs;
+				const char *seq_ptr;
+
+				if (!ItemIdIsNormal(itemid))
+					continue;
+
+				tuple_data = (char *) PageGetItem(page, itemid);
+				header = (HeapTupleHeader) tuple_data;
+				if (ItemIdGetLength(itemid) <= header->t_hoff)
+					continue;
+
+				attrs = tuple_data + header->t_hoff;
+				remaining = ItemIdGetLength(itemid) - header->t_hoff;
+
+				if (consumeAlignedOid(attrs, remaining, &oidConsumed, &tupleToastOid) < 0)
+					continue;
+				if (tupleToastOid != toastOid)
+					continue;
+
+				seq_ptr = (const char *) INTALIGN(attrs + oidConsumed);
+				seqSkip = (unsigned int) ((uintptr_t) seq_ptr - (uintptr_t) (attrs + oidConsumed));
+				if (remaining < oidConsumed + seqSkip + sizeof(int32))
+					continue;
+
+				memcpy(&chunkSeq, seq_ptr, sizeof(int32));
+
+				chunkInfo *elem = (chunkInfo *) pdu_malloc(sizeof(chunkInfo));
+				if (elem == NULL)
+					continue;
+
+				elem->toid = toastOid;
+				elem->chunkid = (uint32) chunkSeq;
+				elem->blk = blkno;
+				elem->toff = ItemIdGetOffset(itemid);
+				elem->suffix = 0;
+				parray_append(chunkInfosInner, elem);
+			}
+		}
+
+		fclose(fp);
+		free(block);
+		block = NULL;
+		fp = NULL;
+	}
+
+	if(parray_num(chunkInfosInner) == 0){
+		parray_free(chunkInfosInner);
 		return FAILURE_RET;
 	}
 
 	int num_groups;
-    parray **groups = group_chunks(chunkInfosInner, &num_groups);
+	parray **groups = group_chunks(chunkInfosInner, &num_groups);
 
-	int toastRead;
 	for (int g = 0; g < num_groups; g++) {
 		parray *chunkInfos = groups[g];
-		unsigned int	chunkSize = 0;
-		toastRead = 0;
+		unsigned int toastRead = 0;
 
 		fp = fopen(toastfilePath,"rb");
 		if(!fp){
-			parray_free(chunkInfos);
 			printf("can not open %s \n",toastfilePath);
-			return FAILURE_RET;
+			break;
 		}
 		blockSize = determinePageDimension(fp);
 		block = (char *)malloc(blockSize);
 		if (!block)
 		{
-			parray_free(chunkInfos);
-			free(block);
 			printf("\nFAILED TO ALLOCATE SIZE OF <%d> BYTES \n",blockSize);
-			return FAILURE_RET;
+			fclose(fp);
+			fp = NULL;
+			break;
 		}
 		for(int x=0;x<parray_num(chunkInfos);x++){
 			chunkInfo *elem = parray_get(chunkInfos,x);
+			unsigned int chunkSize;
 			uint64_t blkoff = (uint64_t)elem->blk * (uint64_t)blockSize;
 			if (toastRead >= toastExternalSize) {
 				break;
@@ -2522,12 +2608,12 @@ int assembleToastByIndex(Oid toastOid,unsigned int toastExternalSize,char *toast
 				continue;
 			}
 
-			fread(block, 1, blockSize, fp);
+			if (fread(block, 1, blockSize, fp) != (size_t) blockSize)
+				continue;
 
 			char *tuple_data = &block[elem->toff];
 			HeapTupleHeader	header = (HeapTupleHeader)tuple_data;
 			char	   *data = tuple_data + header->t_hoff + 8;
-			unsigned int	size = 0;
 
 			chunkSize = VARSIZE(data) - VARHDRSZ;
 			if(chunkSize > toastExternalSize ||
@@ -2538,28 +2624,30 @@ int assembleToastByIndex(Oid toastOid,unsigned int toastExternalSize,char *toast
 			toastRead +=chunkSize;
 		}
 
-		if(toastRead >= toastExternalSize){
-			for (int g = 0; g < num_groups; g++) {
-				parray *elem = groups[g];
-				parray_free(elem);
-			}
-			free(groups);
-			fclose(fp);
-			free(block);
-			return SUCCESS_RET;
-		}
-
 		fclose(fp);
 		free(block);
-		return FAILURE_RET;
+		block = NULL;
+		fp = NULL;
+
+		if(toastRead >= toastExternalSize){
+			result = SUCCESS_RET;
+			break;
+		}
 	}
 
-    for (int g = 0; g < num_groups; g++) {
+	for (int g = 0; g < num_groups; g++) {
 		parray *elem = groups[g];
-        parray_free(elem);
-    }
-    free(groups);
-    return FAILURE_RET;
+		parray_free(elem);
+	}
+	free(groups);
+
+	if (ownsChunkInfos) {
+		for (size_t i = 0; i < parray_num(chunkInfosInner); i++)
+			free(parray_get(chunkInfosInner, i));
+	}
+	parray_free(chunkInfosInner);
+
+	return result;
 }
 
 static int extractToastedPayloadDs(const char *input, unsigned int input_len, unsigned int *consumed, int (*emit_value)(const char *, int))

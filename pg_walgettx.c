@@ -102,6 +102,36 @@ char FPWSegmentPath[100];
 
 parray *LsnBlkInfos = NULL;
 
+static bool rel_matches_main(RelFileNumber relnode)
+{
+	return relnode == (RelFileNumber)atoi(targetDatafile) ||
+		   relnode == (RelFileNumber)atoi(targetOldDatafile);
+}
+
+static bool rel_matches_toast(RelFileNumber relnode)
+{
+	return relnode == (RelFileNumber)atoi(targetToastfile) ||
+		   relnode == (RelFileNumber)atoi(targetOldToastfile);
+}
+
+static void switch_fpw_path_for_rel(RelFileNumber relnode, char *savedPath, bool *switched)
+{
+	*switched = false;
+	if (!rel_matches_toast(relnode))
+		return;
+
+	snprintf(savedPath, sizeof(FPWSegmentPath), "%s", FPWSegmentPath);
+	snprintf(FPWSegmentPath, sizeof(FPWSegmentPath), "%s", "restore/datafile");
+	*switched = true;
+}
+
+static void restore_fpw_path(const char *savedPath, bool switched)
+{
+	if (!switched)
+		return;
+	snprintf(FPWSegmentPath, sizeof(FPWSegmentPath), "%s", savedPath);
+}
+
 #include <pthread.h>
 
 /* Index entry structure: stores block number and corresponding offset */
@@ -2513,6 +2543,7 @@ int restoreUPDATE(pg_attributeDesc *allDesc,XLogReaderState *record,parray *Tx_p
 	if(txInTxArrayOrNot(currentTx,Tx_parray,restoreMode_there)){ /* If target tx and not toast round */
 		FILE *logSucc=fopen("log/logPathSucc.txt","a");
 		FILE *logErr=fopen("log/logPathErr.txt","a");
+		resetUpdateParrays();
 		XLogRecPtr	lsn = record->EndRecPtr;
 		xl_heap_update *xlrec = (xl_heap_update *) XLogRecGetData(record);
 		RelFileNode rnode;
@@ -2610,127 +2641,36 @@ int restoreUPDATE(pg_attributeDesc *allDesc,XLogReaderState *record,parray *Tx_p
 				newpage[i] = oldpage[i];
 			}
 		}
-		else{
-			if(!FPWfromFile(newblk,newpage,filenode)){ /* If FPW not found, report error */
-				LsnBlkInfo *elem = (LsnBlkInfo*)malloc(sizeof(LsnBlkInfo));
-				snprintf(elem->LSN, sizeof(elem->LSN), "%X/%08X", LSN_FORMAT_ARGS(lsn));
-				elem->blk = newblk;
-				ErrBlkNotFound(newblk,lsn);
-				parray_append(LsnBlkInfos,elem);
-				
-				freeOldParray();
-				FPIErrcount++;
-				return CONTINUE_RET;
+			else{
+				if(!FPWfromFile(newblk,newpage,filenode)){ /* If FPW not found, report error */
+					LsnBlkInfo *elem = (LsnBlkInfo*)malloc(sizeof(LsnBlkInfo));
+					snprintf(elem->LSN, sizeof(elem->LSN), "%X/%08X", LSN_FORMAT_ARGS(lsn));
+					elem->blk = newblk;
+					ErrBlkNotFound(newblk,lsn);
+					parray_append(LsnBlkInfos,elem);
+					
+					freeOldParray();
+					FPIErrcount++;
+					return CONTINUE_RET;
+				}
 			}
+
+		offnum = xlrec->new_offnum;
+		if (PageGetMaxOffsetNumber(newpage) + 1 < offnum){
+			return -1;
 		}
 
-		if(XLogRecHasBlockImage(record, 0)){
-			offnum = xlrec->new_offnum;
-			if (PageGetMaxOffsetNumber(newpage) + 1 < offnum){
-				return -1;
-			}
-
-			if (PageGetMaxOffsetNumber(newpage) >= offnum){
-				newlp = PageGetItemId(newpage, offnum);
-			}
-
-			if (PageGetMaxOffsetNumber(newpage) < offnum || !ItemIdIsNormal(newlp))
-			{
-				return -1;
-			}
-			tuplelen = (Size)newlp->lp_len;
-			newhtup = (HeapTupleHeader) PageGetItem(newpage, newlp);
-
-			xman=xmanDecode(dropExist2,allDesc,array2Process,(const char *)newhtup,tuplelen,TABLE_BOOTTYPE,logSucc,logErr);
+		if (PageGetMaxOffsetNumber(newpage) >= offnum){
+			newlp = PageGetItemId(newpage, offnum);
 		}
-		else{
-			/* Deal with new tuple */
-			char	   *recdata;
-			char	   *recdata_end;
-			Size		datalen;
-			Size		tuplen;
 
-			recdata = (char *)XLogRecGetBlockData(record, 0, &datalen);
-			if(recdata == NULL){
-				recdata = (char *)XLogRecGetBlockData(record, 1, &datalen);
-			}
-			recdata_end = recdata + datalen;
-
-			if (xlrec->flags & XLH_UPDATE_PREFIX_FROM_OLD)
-			{
-				Assert(newblk == oldblk);
-				memcpy(&prefixlen, recdata, sizeof(uint16));
-				recdata += sizeof(uint16);
-			}
-			if (xlrec->flags & XLH_UPDATE_SUFFIX_FROM_OLD)
-			{
-				Assert(newblk == oldblk);
-				memcpy(&suffixlen, recdata, sizeof(uint16));
-				recdata += sizeof(uint16);
-			}
-
-			memcpy((char *) &xlhdr, recdata, SizeOfHeapHeader);
-			recdata += SizeOfHeapHeader;
-
-			tuplen = recdata_end - recdata;
-			Assert(tuplen <= MaxHeapTupleSize);
-
-			htup = &tbuf.hdr;
-			MemSet((char *) htup, 0, SizeofHeapTupleHeader);
-
-			/*
-				* Reconstruct the new tuple using the prefix and/or suffix from the
-				* old tuple, and the data stored in the WAL record.
-				*/
-			newp = (char *) htup + SizeofHeapTupleHeader;
-			if (prefixlen > 0)
-			{
-				int			len;
-
-				/* copy bitmap [+ padding] [+ oid] from WAL record */
-				len = xlhdr.t_hoff - SizeofHeapTupleHeader;
-				memcpy(newp, recdata, len);
-				recdata += len;
-				newp += len;
-
-				/* copy prefix from old tuple */
-				memcpy(newp, (char *) oldtup.t_data + oldtup.t_data->t_hoff, prefixlen);
-				newp += prefixlen;
-
-				/* copy new tuple data from WAL record */
-				len = tuplen - (xlhdr.t_hoff - SizeofHeapTupleHeader);
-				memcpy(newp, recdata, len);
-				recdata += len;
-				newp += len;
-			}
-			else
-			{
-				/*
-					* copy bitmap [+ padding] [+ oid] + data from record, all in one
-					* go
-					*/
-				memcpy(newp, recdata, tuplen);
-				recdata += tuplen;
-				newp += tuplen;
-			}
-			Assert(recdata == recdata_end);
-
-			/* copy suffix from old tuple */
-			if (suffixlen > 0)
-				memcpy(newp, (char *) oldtup.t_data + oldtup.t_len - suffixlen, suffixlen);
-
-			newlen = SizeofHeapTupleHeader + tuplen + prefixlen + suffixlen;
-			htup->t_infomask2 = xlhdr.t_infomask2;
-			htup->t_infomask = xlhdr.t_infomask;
-			htup->t_hoff = xlhdr.t_hoff;
-
-			HeapTupleHeaderSetXmin(htup, XLogRecGetXid(record));
-			HeapTupleHeaderSetCmin(htup, FirstCommandId);
-			HeapTupleHeaderSetXmax(htup, xlrec->new_xmax);
-			/* Make sure there is no forward chain link in t_ctid */
-			htup->t_ctid = newtid;
-			xman=xmanDecode(dropExist2,allDesc,array2Process,(const char *)htup,newlen,TABLE_BOOTTYPE,logSucc,logErr);
+		if (PageGetMaxOffsetNumber(newpage) < offnum || !ItemIdIsNormal(newlp))
+		{
+			return -1;
 		}
+		tuplelen = (Size)newlp->lp_len;
+		newhtup = (HeapTupleHeader) PageGetItem(newpage, newlp);
+		xman=xmanDecode(dropExist2,allDesc,array2Process,(const char *)newhtup,tuplelen,TABLE_BOOTTYPE,logSucc,logErr);
 		char *newxman = xman;
 		if ( strcmp(newxman,"NoWayOut") == 0 ||  strcmp(oldxman,"NoWayOut") == 0  ){
 			fclose(logSucc);
@@ -2833,7 +2773,12 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 				}
 				#endif
 
-				if(rnode.relNode != atoi(targetDatafile) && rnode.relNode != atoi(targetOldDatafile))
+				bool matchesMain = rel_matches_main(rnode.relNode);
+				bool matchesToast = rel_matches_toast(rnode.relNode);
+				char savedPath[sizeof(FPWSegmentPath)] = {0};
+				bool switchedPath = false;
+
+				if(!matchesMain && !matchesToast)
 					return CONTINUE_RET;
 
 				if(	lsnIsReached(record->ReadRecPtr,xl_prev,elem->endLSN) )
@@ -2842,17 +2787,19 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 				if(fork != MAIN_FORKNUM)
 					return CONTINUE_RET;
 
+				switch_fpw_path_for_rel(rnode.relNode, savedPath, &switchedPath);
 				if ( XLogRecHasBlockImage(record, block_id) )
 				{
 					if (!RestoreBlockImage(record, block_id, page))
 						printf("%s", record->errormsg_buf);
 					FPW2File(blk,page,rnode.relNode);
 				}
-				else if(resTyp_there == UPDATEtyp){
+				else if(resTyp_there == UPDATEtyp && matchesMain){
 					heap_xlog_delete(record,blk,rnode.relNode);
 				}
+				restore_fpw_path(savedPath, switchedPath);
 
-				if(resTyp_there == DELETEtyp){
+				if(resTyp_there == DELETEtyp && matchesMain){
 						if( restoreDEL(Tx_parray,bootFile,array2Process,del_xlrec,tabname,page,blk,currentTx,rnode.relNode) == BREAK_RET ){
 						return BREAK_RET;
 					}
@@ -2884,7 +2831,12 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 			}
 			#endif
 
-			if(rnode.relNode != atoi(targetDatafile) && rnode.relNode != atoi(targetOldDatafile))
+			bool matchesMain = rel_matches_main(rnode.relNode);
+			bool matchesToast = rel_matches_toast(rnode.relNode);
+			char savedPath[sizeof(FPWSegmentPath)] = {0};
+			bool switchedPath = false;
+
+			if(!matchesMain && !matchesToast)
 				return CONTINUE_RET;
 
 			if(	lsnIsReached(record->ReadRecPtr,xl_prev,elem->endLSN) )
@@ -2893,6 +2845,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 			if(fork != MAIN_FORKNUM)
 				return CONTINUE_RET;
 
+			switch_fpw_path_for_rel(rnode.relNode, savedPath, &switchedPath);
 			if ( XLogRecHasBlockImage(record, 0) )
 			{
 				if (!RestoreBlockImage(record, 0, page))
@@ -2911,8 +2864,9 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 					heap_xlog_inplace(record,blk,rnode.relNode);
 				}
 			}
+			restore_fpw_path(savedPath, switchedPath);
 
-			if(resTyp_there == UPDATEtyp && is_update){
+			if(resTyp_there == UPDATEtyp && is_update && matchesMain){
 				setExportMode_decode(SQLform);
 				if( restoreUPDATE(allDesc,record,Tx_parray,bootFile,array2Process,tabname,page,blk,hot_update,currentTx,rnode.relNode) == BREAK_RET )
 				{
@@ -2950,7 +2904,12 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 			}
 			#endif
 
-			if(rnode.relNode != atoi(targetDatafile) && rnode.relNode != atoi(targetOldDatafile))
+			bool matchesMain = rel_matches_main(rnode.relNode);
+			bool matchesToast = rel_matches_toast(rnode.relNode);
+			char savedPath[sizeof(FPWSegmentPath)] = {0};
+			bool switchedPath = false;
+
+			if(!matchesMain && !matchesToast)
 				return CONTINUE_RET;
 
 			if(	lsnIsReached(record->ReadRecPtr,xl_prev,elem->endLSN) )
@@ -2959,6 +2918,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 			if(fork != MAIN_FORKNUM)
 				continue;
 
+			switch_fpw_path_for_rel(rnode.relNode, savedPath, &switchedPath);
 			if ( XLogRecHasBlockImage(record, block_id) )
 			{
 				if (!RestoreBlockImage(record, block_id, page))
@@ -2987,6 +2947,7 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 					heap_xlog_multi_insert(record,blk,rnode.relNode);
 				}
 			}
+			restore_fpw_path(savedPath, switchedPath);
 		}
 	}
 	else if (rmid == BTREE_redo)
@@ -3032,7 +2993,12 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 
 		#endif
 
-		if(rnode.relNode != atoi(targetDatafile) && rnode.relNode != atoi(targetOldDatafile))
+		bool matchesMain = rel_matches_main(rnode.relNode);
+		bool matchesToast = rel_matches_toast(rnode.relNode);
+		char savedPath[sizeof(FPWSegmentPath)] = {0};
+		bool switchedPath = false;
+
+		if(!matchesMain && !matchesToast)
 			return CONTINUE_RET;
 
 		if(	lsnIsReached(record->ReadRecPtr,xl_prev,elem->endLSN) )
@@ -3041,12 +3007,14 @@ int XLogRecordRestoreFPWs(pg_attributeDesc *allDesc,XLogReaderState *record, con
 		if(fork != MAIN_FORKNUM)
 			return CONTINUE_RET;
 
+		switch_fpw_path_for_rel(rnode.relNode, savedPath, &switchedPath);
 		if ( XLogRecHasBlockImage(record, 0) )
 		{
 			if (!RestoreBlockImage(record, 0, page))
 				printf("%s", record->errormsg_buf);
 			FPW2File(blk,page,rnode.relNode);
 		}
+		restore_fpw_path(savedPath, switchedPath);
 
 	}
 	else if(rmid == TRANSACTION_redo){
