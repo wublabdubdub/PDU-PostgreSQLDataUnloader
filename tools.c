@@ -1032,6 +1032,52 @@ size_t harray_num(const harray *array)
 	return array!= NULL ? array->used : (size_t) 0;
 }
 
+static void appendCsvValue(char *dest, size_t destsize, const char *value)
+{
+    size_t used;
+
+    if (dest == NULL || value == NULL || destsize == 0) {
+        return;
+    }
+
+    used = strlen(dest);
+    if (used >= destsize - 1) {
+        return;
+    }
+
+    if (used > 0) {
+        strncat(dest, ",", destsize - used - 1);
+        used = strlen(dest);
+        if (used >= destsize - 1) {
+            return;
+        }
+    }
+
+    strncat(dest, value, destsize - used - 1);
+}
+
+static char *nextCsvToken(char **cursor)
+{
+    char *token;
+    char *comma;
+
+    if (cursor == NULL || *cursor == NULL || **cursor == '\0') {
+        return NULL;
+    }
+
+    token = *cursor;
+    comma = strchr(token, ',');
+    if (comma != NULL) {
+        *comma = '\0';
+        *cursor = comma + 1;
+    }
+    else {
+        *cursor = NULL;
+    }
+
+    return token;
+}
+
 void harray_free(harray* harray)
 {
     for (int i = 0; i < harray_num(harray); i++) {
@@ -1051,9 +1097,9 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
 {
     char typStr[10240]="";
     char attrStr[10240]="";
-    char modStr[2048]="";
-    char lenStr[1024]="";
-    char alignStr[1024]="";
+    char modStr[10240]="";
+    char lenStr[10240]="";
+    char alignStr[10240]="";
     ATTRstruct *tempArray = NULL;
 
     int g=0;
@@ -1083,54 +1129,29 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
                 qsort(tempArray, attrAppendCount, sizeof(ATTRstruct), compare);
                 for (x=0; x<attrAppendCount; x++){
 
-                    int isdrop = 0;
-                    if(strncmp(tempArray[x].attr,dropPrefix,18) == 0)
-                        isdrop =1;
+                    int isdrop = attrIsDropped(tempArray[x].attr);
                     if(isdrop){
                         memset(tempArray[x].attr,0,50);
                         snprintf(tempArray[x].attr, sizeof(tempArray[x].attr), "dropped");
                     }
 
-                    if(x == attrAppendCount -1){
-                        strcat(attrStr,tempArray[x].attr);
-                        strcat(typStr,tempArray[x].typid);
-                        if(!isdrop)
-                            strcat(modStr,tempArray[x].attrmod);
-                        strcat(lenStr,tempArray[x].attlen);
-                        strcat(alignStr,tempArray[x].attalign);
-                    }
-                    else if (x != 0){
-                        strcat(attrStr,tempArray[x].attr);
-                        strcat(attrStr,",");
-                        strcat(typStr,tempArray[x].typid);
-                        strcat(typStr,",");
-                        if(!isdrop) {
-                            strcat(modStr,tempArray[x].attrmod);
-                            strcat(modStr,",");
-                        }
-                        strcat(lenStr,tempArray[x].attlen);
-                        strcat(lenStr,",");
-                        strcat(alignStr,tempArray[x].attalign);
-                        strcat(alignStr,",");
-
-                    }
-                    else{
-                        snprintf(attrStr, sizeof(attrStr), "%s%s",tempArray[x].attr,",");
-                        snprintf(typStr, sizeof(typStr), "%s%s",tempArray[x].typid,",");
-                        if(!isdrop)
-                            snprintf(modStr, sizeof(modStr), "%s%s",tempArray[x].attrmod,",");
-                        snprintf(lenStr, sizeof(lenStr), "%s%s",tempArray[x].attlen,",");
-                        snprintf(alignStr, sizeof(alignStr), "%s%s",tempArray[x].attalign,",");
+                    appendCsvValue(attrStr, sizeof(attrStr), tempArray[x].attr);
+                    appendCsvValue(lenStr, sizeof(lenStr), tempArray[x].attlen);
+                    appendCsvValue(alignStr, sizeof(alignStr), tempArray[x].attalign);
+                    if(!isdrop) {
+                        appendCsvValue(typStr, sizeof(typStr), tempArray[x].typid);
+                        appendCsvValue(modStr, sizeof(modStr), tempArray[x].attrmod);
                     }
 
                 }
 
-                char typStrArray[1024][10]={};
-                char attrTyp[2048]="";
+                char typStrArray[1024][50]={};
+                char attrTyp[10240]="";
                 int a=0;
                 char *token = strtok(typStr, ",");
-                while( token != NULL ) {
-                    strcpy(typStrArray[a++],token);
+                while( token != NULL && a < 1024 ) {
+                    snprintf(typStrArray[a], sizeof(typStrArray[a]), "%s", token);
+                    a++;
                     token = strtok(NULL, ",");
                 }
                 int y;
@@ -1167,7 +1188,7 @@ void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct 
                     return;
                 }
                 memset(lenStrProced,0,65536);
-                processAttMod(attrTyp,modStr,lenStrProced);
+                processAttMod(attrTyp,modStr,lenStrProced,65536);
                 snprintf(taboidTMP[g].attr, sizeof(taboidTMP[g].attr), "%s", attrStr);
                 snprintf(taboidTMP[g].typ, sizeof(taboidTMP[g].typ), "%s", attrTyp);
                 snprintf(taboidTMP[g].attmod, sizeof(taboidTMP[g].attmod), "%s", lenStrProced);
@@ -1353,75 +1374,74 @@ void getTypForTrunc(harray *attr_harray,parray *GetTxRetAll,TYPstruct *typoid,in
 
 }
 
-void processAttMod(const char attrTyp[],const char modStr[],char *ret)
+void processAttMod(const char attrTyp[],const char modStr[],char *ret, size_t retsize)
 {
 
-    char *attrTypx = pdu_strdup(attrTyp);
+    char *attrTypx = pdu_strdup(attrTyp == NULL ? "" : attrTyp);
     if (attrTypx == NULL) {
         return;
     }
-    char *modStrx = pdu_strdup(modStr);
+    char *modStrx = pdu_strdup(modStr == NULL ? "" : modStr);
     if (modStrx == NULL) {
         free(attrTypx);
         return;
     }
 
-    char *tokenTyp;
-    char *tokenLen;
-
-    const char *delim = ",";
-
-    parray *modarray = NULL;
-    parray *typarray = NULL;
-    modarray = parray_new();
-    typarray = parray_new();
-
-    tokenLen = strtok(modStrx, delim);
-    while (tokenLen != NULL){
-        char *x = pdu_malloc(10);
-        if (x == NULL) {
-            break;
-        }
-        memset(x,0,10);
-        snprintf(x, 10, "%s", tokenLen);        parray_append(modarray,x);
-        tokenLen = strtok(NULL, delim);
+    if (ret == NULL || retsize == 0) {
+        free(attrTypx);
+        free(modStrx);
+        return;
     }
+    ret[0] = '\0';
 
-    tokenTyp = strtok(attrTypx, delim);
-    while (tokenTyp != NULL){
-        char *y = pdu_malloc(100);
-        if (y == NULL) {
-            break;
-        }
-        memset(y,0,100);
-        snprintf(y, 100, "%s", tokenTyp);        parray_append(typarray,y);
-        tokenTyp = strtok(NULL, delim);
-    }
+    char *typCursor = attrTypx;
+    char *modCursor = modStrx;
+    char *Typ = nextCsvToken(&typCursor);
+    char *Len = nextCsvToken(&modCursor);
+    int first = 1;
 
-    int i;
-    for(i=0;i<parray_num(typarray);i++){
-        char *Typ = parray_get(typarray,i);
-        char *Len = parray_get(modarray,i);
+    while(Typ != NULL){
         char tmp[50];
         processAttModInner(Typ,Len,tmp,sizeof(tmp));
 
-        if(i == 0){
-            snprintf(ret,2048,"%s",tmp);
+        if(tmp[0] != '\0'){
+            if(!first){
+                appendCsvValue(ret, retsize, tmp);
+            }
+            else{
+                snprintf(ret,retsize,"%s",tmp);
+                first = 0;
+            }
         }
-        else{
-            char prev[2048];
-            snprintf(prev,sizeof(prev),"%s",ret);
-            snprintf(ret,2048,"%s,%s",prev,tmp);
-        }
+
+        Typ = nextCsvToken(&typCursor);
+        Len = nextCsvToken(&modCursor);
     }
-    parray_free(modarray);
-    parray_free(typarray);
+
+    free(attrTypx);
+    free(modStrx);
 }
 
 void processAttModInner(char *tokenTyp,char *tokenLen, char *tmp, size_t tmpsize)
 {
+    char *endptr = NULL;
+
+    if (tmp == NULL || tmpsize == 0) {
+        return;
+    }
     tmp[0] = '\0';
-    int numLen = atoi(tokenLen);
+    if (tokenTyp == NULL || tokenTyp[0] == '\0' || tokenLen == NULL || tokenLen[0] == '\0') {
+        snprintf(tmp, tmpsize, "()");
+        return;
+    }
+
+    long parsedLen = strtol(tokenLen, &endptr, 10);
+    if (endptr == tokenLen) {
+        snprintf(tmp, tmpsize, "()");
+        return;
+    }
+
+    int numLen = (int)parsedLen;
     if(numLen == -1){
         snprintf(tmp, tmpsize, "()");
     }
@@ -1438,6 +1458,9 @@ void processAttModInner(char *tokenTyp,char *tokenLen, char *tmp, size_t tmpsize
     }
     else if(strcmp(tokenTyp,"timestamp") == 0 || strcmp(tokenTyp,"timestamptz") == 0){
         snprintf(tmp, tmpsize, "(%d)",numLen);
+    }
+    else{
+        snprintf(tmp, tmpsize, "()");
     }
 }
 

@@ -1725,11 +1725,14 @@ void flushFinalCLass(TABstruct *taboid,int tabsize){
         char *tmpstr=NULL;
 
         if ( strlen(taboid[i].attr) > 0 ){
-            tmpstr = (char *)pdu_malloc( (sizeof(char))*(sizeof( taboid[i].oid)+sizeof(taboid[i].filenode)+
+            size_t tmpstr_size = sizeof( taboid[i].oid)+sizeof(taboid[i].filenode)+
                         sizeof(taboid[i].nsp)+sizeof(taboid[i].tab)+
-                        sizeof(taboid[i].attr)+sizeof(taboid[i].typ)+sizeof(taboid[i].toastoid)));
+                        sizeof(taboid[i].attr)+sizeof(taboid[i].typ)+sizeof(taboid[i].toastoid)+
+                        sizeof(taboid[i].toastnode)+sizeof(taboid[i].nattr)+sizeof(taboid[i].attmod)+
+                        sizeof(taboid[i].attlen)+sizeof(taboid[i].attalign)+12;
+            tmpstr = (char *)pdu_malloc( (sizeof(char))*tmpstr_size);
             if (tmpstr == NULL) continue;
-            snprintf(tmpstr, 30000, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+            snprintf(tmpstr, tmpstr_size, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
                                                                 taboid[i].oid,taboid[i].filenode,
                                                                 taboid[i].toastoid,taboid[i].toastnode,
                                                                 taboid[i].nsp, taboid[i].tab,

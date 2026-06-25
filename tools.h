@@ -464,9 +464,9 @@ typedef struct
     char attr[10240];
     char typ[10240];
 	char nattr[50];
-	char attmod[1024];
-	char attlen[1024];
-	char attalign[1024];
+	char attmod[10240];
+	char attlen[10240];
+	char attalign[10240];
 } TABstruct;
 
 typedef struct
@@ -503,7 +503,7 @@ typedef struct
 	char oid[50];
     char attr[10240];
     char typ[10240];
-	char attmod[1024];
+	char attmod[10240];
 	char natt[30];
 } ATTRUltrastruct;
 
@@ -732,7 +732,7 @@ void get_parent_directory(char* path);
 
 static void trim_directory(char* path);
 
-void processAttMod(const char attrTyp[],const char modStr[],char *ret);
+void processAttMod(const char attrTyp[],const char modStr[],char *ret, size_t retsize);
 
 void processAttModInner(char *tokenTyp,char *tokenLen, char *tmp, size_t tmpsize);
 
