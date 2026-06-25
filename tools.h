@@ -33,6 +33,8 @@
 #include <sys/ioctl.h>
 #include <linux/fs.h>
 #include <fcntl.h>
+
+#define DEFAULT_WAL_SEG_SIZE (16 * 1024 * 1024)
 #include <linux/fiemap.h>
 #include <inttypes.h> 
 #include <regex.h>
@@ -756,7 +758,7 @@ int isParameter(char *value,int *type);
 
 int compare_walfile(const void *a, const void *b);
 
-int countFilesBetween(const char* filename1, const char* filename2);
+int countFilesBetween(const char* filename1, const char* filename2, int walSegSz);
 
 void trimLeadingSpaces(char **str);
 

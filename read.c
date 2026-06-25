@@ -2296,6 +2296,44 @@ void initWalScan(int flag,WALFILE *archDirFiles_array,WALFILE *walDirFiles_array
 
 }
 
+static int getWalSegSizeFromFile(const char *directory, const char *walname)
+{
+    char fpath[MAXPGPATH] = {0};
+    PGAlignedXLogBlock buf;
+    XLogPageHeader hdr;
+    XLogLongPageHeader longhdr;
+    FILE *fp;
+    size_t r;
+
+    if (directory == NULL || walname == NULL || walname[0] == '\0') {
+        return DEFAULT_WAL_SEG_SIZE;
+    }
+
+    snprintf(fpath, sizeof(fpath), "%s/%s", directory, walname);
+    fp = fopen(fpath, "rb");
+    if (fp == NULL) {
+        return DEFAULT_WAL_SEG_SIZE;
+    }
+
+    r = fread(buf.data, 1, XLOG_BLCKSZ, fp);
+    fclose(fp);
+    if (r != XLOG_BLCKSZ) {
+        return DEFAULT_WAL_SEG_SIZE;
+    }
+
+    hdr = (XLogPageHeader) buf.data;
+    if ((hdr->xlp_info & XLP_LONG_HEADER) == 0) {
+        return DEFAULT_WAL_SEG_SIZE;
+    }
+
+    longhdr = (XLogLongPageHeader) hdr;
+    if (!IsValidWalSegSize(longhdr->xlp_seg_size)) {
+        return DEFAULT_WAL_SEG_SIZE;
+    }
+
+    return longhdr->xlp_seg_size;
+}
+
 /**
  * printLsnT - Print LSN timing information
  *
@@ -2405,6 +2443,8 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
         exit(1);
     }
 
+    int walSegSz = getWalSegSizeFromFile(archivedir, start_archfilename);
+
     infoWalRange(start_archfilename,end_archfilename);
 
     if(flag == DELRESTORE && restoreMode == periodRestore){
@@ -2450,7 +2490,7 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
         infoRestoreMode(item);
     }
 
-    int walDiff=countFilesBetween(start_archfilename,end_archfilename);
+    int walDiff=countFilesBetween(start_archfilename,end_archfilename,walSegSz);
     if(walDiff+2 > 250){
         #ifdef CN
         printf("%s当前的WAL文件区间的文件个数为%d,超过250个 ,建议设置参数startwal与endwal ,本次不执行%s\n",COLOR_WARNING,walDiff+2,C_RESET);
@@ -2463,7 +2503,7 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
     snprintf(end_walfilename, sizeof(end_walfilename), "%s", walDirFiles[pgwalWaldirNum-1].walnames);
 
     if(flag == DELRESTORE){
-        int startWalDiff=countFilesBetween(start_archfilename,startwal);
+        int startWalDiff=countFilesBetween(start_archfilename,startwal,walSegSz);
 
         if(startWalDiff >5){
             char choice;

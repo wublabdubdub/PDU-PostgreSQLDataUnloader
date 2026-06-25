@@ -1915,30 +1915,46 @@ int hexStrToInt(const char* hexStr) {
     return result;
 }
 
-int countFilesBetween(const char* filename1, const char* filename2) {
+int countFilesBetween(const char* filename1, const char* filename2, int walSegSz) {
     char mid1[9] = {0}, mid2[9] = {0};
     char hex1[9] = {0}, hex2[9] = {0};
+    uint64_t segsPerLogId;
+    uint64_t segNo1;
+    uint64_t segNo2;
     strncpy(mid1, filename1 + 8, 8);
     strncpy(mid2, filename2 + 8, 8);
     strncpy(hex1, filename1 + 16, 8);
     strncpy(hex2, filename2 + 16, 8);
 
-    int midNum1 = hexStrToInt(mid1);
-    int midNum2 = hexStrToInt(mid2);
-    int hexNum1 = hexStrToInt(hex1);
-    int hexNum2 = hexStrToInt(hex2);
-
-    if (midNum1 == midNum2) {
-        if (hexNum1 <= hexNum2) {
-            return hexNum2 - hexNum1 - 1;
-        } else {
-            return -1;
-        }
-    } else {
-        int midDiff = midNum2 - midNum1 - 1;
-        int hexDiff = 256 - hexNum1 + hexNum2 - 1;
-        return midDiff * 256 + hexDiff;
+    if (walSegSz < 1024 * 1024 ||
+        walSegSz > 1024 * 1024 * 1024 ||
+        (walSegSz & (walSegSz - 1)) != 0) {
+        walSegSz = DEFAULT_WAL_SEG_SIZE;
     }
+    segsPerLogId = 0x100000000ULL / (uint64_t)walSegSz;
+
+    uint64_t midNum1 = strtoull(mid1, NULL, 16);
+    uint64_t midNum2 = strtoull(mid2, NULL, 16);
+    uint64_t hexNum1 = strtoull(hex1, NULL, 16);
+    uint64_t hexNum2 = strtoull(hex2, NULL, 16);
+
+    if (hexNum1 >= segsPerLogId || hexNum2 >= segsPerLogId) {
+        return -1;
+    }
+
+    segNo1 = midNum1 * segsPerLogId + hexNum1;
+    segNo2 = midNum2 * segsPerLogId + hexNum2;
+
+    if (segNo2 < segNo1) {
+        return -1;
+    }
+    if (segNo2 - segNo1 <= 1) {
+        return 0;
+    }
+    if (segNo2 - segNo1 - 1 > (uint64_t)INT_MAX) {
+        return INT_MAX;
+    }
+    return (int)(segNo2 - segNo1 - 1);
 }
 
 void trimLeadingSpaces(char **str) {
