@@ -400,7 +400,7 @@ void infoTxScanResult(DELstruct *elem,char *resStr)
 {
     char *timestp = (char *)timestamptz_to_str_og(elem->txtime);
 
-    int tx = elem->tx;
+    TransactionId tx = elem->tx;
     char *oid = elem->datafile;
     char *toastoid = elem->toast;
     int rec = elem->delCount;
@@ -417,7 +417,7 @@ void infoTxScanResult(DELstruct *elem,char *resStr)
     printf("%s 建议startwal: %s%s%s    %s\n", C_WHITE2,C_FILEPATH,startwal,C_RESET,C_RESET);
     printf("%s 建议endwal: %s%s%s    %s\n", C_WHITE2,C_FILEPATH,endwal,C_RESET,C_RESET);
     printf("%s       -------------------.--------------------%s\n",C_WHITE2,C_RESET);
-    printf("%s ● 事务号: %-10d     ● 该事务%s%s%s的数据量: %s%d%s 行%s\n", C_WHITE2,tx,COLOR_WARNING,resStr,C_RESET,COLOR_WARNING,rec,C_RESET,C_RESET);
+    printf("%s ● 事务号: %-10u     ● 该事务%s%s%s的数据量: %s%d%s 行%s\n", C_WHITE2,tx,COLOR_WARNING,resStr,C_RESET,COLOR_WARNING,rec,C_RESET,C_RESET);
     printf("%s ● 数据文件OID: %-10s● Toast文件OID: %s%s\n", C_WHITE2,oid,toastoid, C_RESET);
     printf("%s└─────────────────────────────────────────────────────────┘%s\n", C_GREY2, C_RESET);
     #else
@@ -428,7 +428,7 @@ void infoTxScanResult(DELstruct *elem,char *resStr)
     printf("%s Recommanded startwal: %s%s%s    %s\n", C_WHITE2,C_FILEPATH,startwal,C_RESET,C_RESET);
     printf("%s Recommanded endwal: %s%s%s    %s\n", C_WHITE2,C_FILEPATH,endwal,C_RESET,C_RESET);
     printf("%s       -------------------.--------------------%s\n",C_WHITE2,C_RESET);
-    printf("%s ● Tx Number: %-10d   ● Records %s%s%s by the TX: %s%d%s %s\n", C_WHITE2,tx,COLOR_WARNING,resStr,C_RESET,COLOR_WARNING,rec,C_RESET,C_RESET);
+    printf("%s ● Tx Number: %-10u   ● Records %s%s%s by the TX: %s%d%s %s\n", C_WHITE2,tx,COLOR_WARNING,resStr,C_RESET,COLOR_WARNING,rec,C_RESET,C_RESET);
     printf("%s ● Datafiel OID: %-10s● Toastfile OID: %s%s\n", C_WHITE2,oid,toastoid, C_RESET);
     printf("%s└─────────────────────────────────────────────────────────┘%s\n", C_GREY2, C_RESET);
     #endif
@@ -455,7 +455,7 @@ void infoScanDropResult(dropElem *elem)
     printf("%s 时间戳: %s%s\n", C_WHITE2,timestp,C_RESET);
     printf("%s       -------------------.--------------------%s\n",C_WHITE2,C_RESET);
     printf("%s ● 表名:%s %s%s%s     \n",C_WHITE2,C_RESET, COLOR_ERROR,tabname,C_RESET);
-    printf("%s ● 事务号: %-10d● 文件filenode: %d%s\n", C_WHITE2,tx,oid, C_RESET);
+    printf("%s ● 事务号: %-10u● 文件filenode: %d%s\n", C_WHITE2,tx,oid, C_RESET);
     printf("%s└─────────────────────────────────────────────────────────┘%s\n", C_GREY2, C_RESET);
     #else
     printf("\n%s▌ Tx Details%s\n", C_SUBTITLE, C_RESET);
@@ -463,7 +463,7 @@ void infoScanDropResult(dropElem *elem)
     printf("%s Timestamp: %s%s\n", C_WHITE2,timestp,C_RESET);
     printf("%s       -------------------.--------------------%s\n",C_WHITE2,C_RESET);
     printf("%s ● Table:%s %s%s%s     \n",C_WHITE2,C_RESET, COLOR_ERROR,tabname,C_RESET);
-    printf("%s ● Tx Number: %-10d● datafile: %d%s\n", C_WHITE2,tx,oid, C_RESET);
+    printf("%s ● Tx Number: %-10u● datafile: %d%s\n", C_WHITE2,tx,oid, C_RESET);
     printf("%s└─────────────────────────────────────────────────────────┘%s\n", C_GREY2, C_RESET);
     #endif
 }

@@ -2466,9 +2466,9 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
         }
         if (!matched){
             #ifdef CN
-            printf("不存在的事务号<%d>\n",txRequested);
+            printf("不存在的事务号<%u>\n",txRequested);
             #else
-            printf("unknown Tx number<%d>\n",txRequested);
+            printf("unknown Tx number<%u>\n",txRequested);
             #endif
             return 0;
         }
@@ -2925,7 +2925,7 @@ void RESTORE(char *former,char *latter,char *third,char *fourth)
 
         initWalScan(RESTOREINIT,archDirFiles_array,walDirFiles_array);
 
-        TransactionId txForDel=atoi(txRequested);
+        TransactionId txForDel=(TransactionId)strtoul(txRequested, NULL, 10);
         if ( !taboid ){
             warningUseDBFirst();
 

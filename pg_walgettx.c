@@ -3796,7 +3796,7 @@ FinalizeMatchedTransaction(TransactionId tx, const char *LSN, TimestampTz txTime
 
 	if (txFound)
 	{
-		parray_append(Txs, (void *)(intptr_t) tx);
+		parray_append(Txs, (void *)(uintptr_t) tx);
 
 		DELstruct *elem = harray_get(delElems, HARRAYDEL, tx);
 
@@ -5256,7 +5256,7 @@ parray *pgGetTxforArch(parray **TxTime_parray_ptr,
 	FILE *bootFile;
 	if(flag == DELRESTORE && restoreMode_there == TxRestore && isToastRound == 0){
 		DELstruct *elem = parray_get(Tx_parray,0);
-		snprintf(bootfilename, sizeof(bootfilename), "restore/public/%s_%d%s",tabname,elem->tx,suffix);
+		snprintf(bootfilename, sizeof(bootfilename), "restore/public/%s_%u%s",tabname,elem->tx,suffix);
 		bootFile = fopen(bootfilename,"w");
         #ifdef CN
         char *item="▌ 事务号恢复模式";
@@ -5507,7 +5507,7 @@ parray *pgGetTxforArch(parray **TxTime_parray_ptr,
 void mergeTxDelElems(parray *TxTime_parray){
 	for (int i = 0; i < parray_num(Txs); i++)
 	{
-		TransactionId Tx = (TransactionId)(intptr_t)parray_get(Txs,i);
+		TransactionId Tx = (TransactionId)(uintptr_t)parray_get(Txs,i);
 		DELstruct *elem = harray_get(delElems,HARRAYDEL,Tx);
 		parray_append(TxTime_parray,elem);
 	}

@@ -866,7 +866,7 @@ void harray_append(harray* harray, int flag, void *elem, uint64 val)
         harray_expand(harray, flag,harray->allocated * 2);
 
     char valStr[1000];
-    snprintf(valStr, sizeof(valStr), "%lld", (long long)val);
+    snprintf(valStr, sizeof(valStr), "%llu", (unsigned long long)val);
 
     unsigned int index = hash(harray,valStr,harray->allocated);
     Node* newNode = (Node*)pdu_malloc(sizeof(Node));
@@ -941,7 +941,7 @@ void harray_expand(harray *array,int flag, size_t newsize) {
             else if ( flag == HARRAYDEL){
                 DELstruct *a = (DELstruct*)current->data;
                 char val2pass[1000];
-                snprintf(val2pass, sizeof(val2pass), "%d",a->tx);
+                snprintf(val2pass, sizeof(val2pass), "%u",a->tx);
                 new_index = hash(array, val2pass,newsize);
             }
             else if( flag == HARRAYTAB ){
@@ -1287,7 +1287,7 @@ void getTypForTrunc(harray *attr_harray,parray *GetTxRetAll,TYPstruct *typoid,in
 
     for(int y=0;y<parray_num(GetTxRetAll);y++){
         TRUNCstruct *elem=parray_get(GetTxRetAll,y);
-        if(elem->tx == atoi(TxRequested)){
+        if(elem->tx == (TransactionId)strtoul(TxRequested, NULL, 10)){
             targetTrunc->tx = elem->tx;
             targetTrunc->datafile = elem->datafile;
             targetTrunc->toast = elem->toast;
