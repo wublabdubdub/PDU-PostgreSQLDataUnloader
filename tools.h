@@ -720,6 +720,8 @@ void genCopy(char *csvpath,FILE *copyfp);
 
 void addQuotesToString(char *str);
 
+void addQuotesToStringSized(char *str, size_t strsize);
+
 int getPgAttrDesc(TABstruct *taboid,pg_attributeDesc *allDesc);
 
 void getAttrUltra(harray *attr_harray,TYPstruct *typoid,int typoidlen,TABstruct *taboidTMP,int tabSize);

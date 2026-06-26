@@ -673,22 +673,43 @@ void genCopy(char *csvpath,FILE *copyfp){
     }
 }
 
-void addQuotesToString(char *str)
+void addQuotesToStringSized(char *str, size_t strsize)
 {
-    int len = strlen(str);
-    int i;
+    size_t len;
+
+    if (str == NULL || strsize == 0) {
+        return;
+    }
+
+    len = strlen(str);
+    if (len + 3 > strsize) {
+        if (strsize >= 1) {
+            str[0] = '\0';
+        }
+        return;
+    }
 
     char *newStr = pdu_malloc(len + 3);
     if (newStr != NULL) {
         newStr[0] = '\'';
-        strncpy(newStr + 1, str, len);
+        memcpy(newStr + 1, str, len);
         newStr[len + 1] = '\'';
         newStr[len + 2] = '\0';
-        snprintf(str, 10240,  "%s", newStr);        free(newStr);
+        snprintf(str, strsize, "%s", newStr);
+        free(newStr);
     } else {
         printf("Memory allocation FAIL\n");
     }
 
+}
+
+void addQuotesToString(char *str)
+{
+    if (str == NULL) {
+        return;
+    }
+
+    addQuotesToStringSized(str, strlen(str) + 3);
 }
 #include <netpacket/packet.h>
 

@@ -1677,13 +1677,13 @@ bool_output(const char *input_data, unsigned int data_length, unsigned int *cons
 		return -1;
 
 	bool b = *(const bool *) input_data;
-	char result[2];
+	char result[4];
 
 	result[0] = (b) ? 't' : 'f';
 	result[1] = '\0';
 
 	if (ExportMode_decode == SQLform)
-		addQuotesToString(result);
+		addQuotesToStringSized(result, sizeof(result));
 
 	emitFormattedValue(result);
 	*consumed_bytes = sizeof(bool);
@@ -1719,7 +1719,7 @@ uuid_output(const char *input_data, unsigned int data_length, unsigned int *cons
 	*p = '\0';
 
 	if (ExportMode_decode == SQLform)
-		addQuotesToString(buf);
+		addQuotesToStringSized(buf, sizeof(buf));
 
 	*consumed_bytes = UUID_LEN;
 	emitFormattedValue(buf);
@@ -1734,11 +1734,11 @@ decode_macaddr(const char *input_data, unsigned int data_length, unsigned int *c
 	if (data_length < 6)
 		return -1;
 
-	snprintf(result, 1024,  "%02x:%02x:%02x:%02x:%02x:%02x",			 (unsigned char) input_data[0], (unsigned char) input_data[1], (unsigned char) input_data[2],
+	snprintf(result, sizeof(result),  "%02x:%02x:%02x:%02x:%02x:%02x",			 (unsigned char) input_data[0], (unsigned char) input_data[1], (unsigned char) input_data[2],
 			 (unsigned char) input_data[3], (unsigned char) input_data[4], (unsigned char) input_data[5]);
 
 	if (ExportMode_decode == SQLform)
-		addQuotesToString(result);
+		addQuotesToStringSized(result, sizeof(result));
 
 	emitFormattedValue(result);
 	*consumed_bytes = 6;
@@ -1814,7 +1814,7 @@ name_output(const char *input_data, unsigned int data_length, unsigned int *cons
 	result[len] = '\0';
 
 	if (ExportMode_decode == SQLform)
-		addQuotesToString(result);
+		addQuotesToStringSized(result, sizeof(result));
 
 	emitFormattedValue(result);
 	*consumed_bytes = NAMEDATALEN;
@@ -2228,7 +2228,7 @@ emitEncodedValue(const char *str, int orig_len)
 
 	if(ExportMode_decode == SQLform){
 		replace_improper_symbols(tmp_buff);
-		addQuotesToString(tmp_buff);
+		addQuotesToStringSized(tmp_buff, 2 * (size_t)orig_len + 3);
 	}
 
 	emitFieldValue(tmp_buff);
@@ -2995,7 +2995,7 @@ static int date_output(const char *input_data, unsigned int data_length, unsigne
 
 	switch (ExportMode_decode) {
 		case SQLform:
-			addQuotesToString(buf);
+			addQuotesToStringSized(buf, sizeof(buf));
 			emitFieldValue(buf);
 			break;
 		case CSVform:
@@ -3127,7 +3127,7 @@ static int timestamp_internal_output(const char *input_data, unsigned int data_l
 
 	switch (ExportMode_decode) {
 		case SQLform:
-			addQuotesToString(output_string);
+			addQuotesToStringSized(output_string, sizeof(output_string));
 			emitFieldValue(output_string);
 			break;
 		case CSVform:
@@ -3178,7 +3178,7 @@ static int time_output(const char *input_data, unsigned int data_length, unsigne
 
 	switch (ExportMode_decode) {
 		case SQLform:
-			addQuotesToString(buf);
+			addQuotesToStringSized(buf, sizeof(buf));
 			emitFieldValue(buf);
 			break;
 		case CSVform:
@@ -3239,7 +3239,7 @@ static int timetz_output(const char *input_data, unsigned int data_length, unsig
 
 	switch (ExportMode_decode) {
 		case SQLform:
-			addQuotesToString(buf);
+			addQuotesToStringSized(buf, sizeof(buf));
 			emitFieldValue(buf);
 			break;
 		case CSVform:
@@ -3352,7 +3352,7 @@ static int timestamp_output(const char *input_data, unsigned int data_length, un
 
 	switch (ExportMode_decode) {
 		case SQLform:
-			addQuotesToString(output_string);
+			addQuotesToStringSized(output_string, sizeof(output_string));
 			emitFieldValue(output_string);
 			break;
 		case CSVform:
@@ -3551,7 +3551,7 @@ static int timestamptz_output(const char *input_data, unsigned int data_length, 
 
 	switch (ExportMode_decode) {
 		case SQLform:
-			addQuotesToString(output_string);
+			addQuotesToStringSized(output_string, sizeof(output_string));
 			emitFieldValue(output_string);
 			break;
 		case CSVform:
