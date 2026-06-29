@@ -131,7 +131,7 @@ PDU> \dn;                  -- List schemas
 PDU> set public;           -- Switch schema
 PDU> \dt;                  -- List tables
 PDU> \d+ customers;        -- Describe table structure
-PDU> unload customers;     -- Export table to CSV
+PDU> unload tab customers; -- Export one table to CSV
 ```
 
 📖 **Full Guide**: [pduzc.com/quickstart](https://pduzc.com/quickstart)
@@ -149,7 +149,10 @@ PDU> unload customers;     -- Export table to CSV
 PDU> b;                          -- Initialize metadata
 PDU> use mydb;
 PDU> set public;
-PDU> unload sch;                 -- Export all tables in schema
+PDU> unload tab customers;       -- Export one table
+PDU> unload sch public;          -- Export all tables in schema
+PDU> unload ddl;                 -- Generate DDL for current schema
+PDU> unload copy;                -- Generate COPY script for exported CSVs
 ```
 
 **Result**: CSV files exported to current directory, even if PostgreSQL won't start.
@@ -164,11 +167,15 @@ PDU> unload sch;                 -- Export all tables in schema
 ```sql
 PDU> use production;
 PDU> set public;
+PDU> param restype delete;       -- Scan DELETE records
+PDU> param resmode tx;           -- Restore by transaction ID
 PDU> scan orders;                -- Scan WAL for deleted rows
-PDU> restore del orders;         -- Restore deleted records
+PDU> restore del <TxID>;         -- Restore one transaction from scan results
 ```
 
 **Result**: Deleted rows recovered from WAL archives and exported to CSV.
+
+For time-range recovery, use `param resmode time;`, set `param starttime <YYYY-MM-DD HH:MM:SS>;` and `param endtime <YYYY-MM-DD HH:MM:SS>;`, then run `scan orders;` and `restore del all;`.
 
 ---
 
@@ -178,8 +185,12 @@ PDU> restore del orders;         -- Restore deleted records
 
 **Solution**:
 ```sql
+PDU> use production;
+PDU> set public;
+PDU> param restype update;       -- Scan UPDATE records
+PDU> param resmode tx;           -- Restore by transaction ID
 PDU> scan users;
-PDU> restore upd users;          -- Restore pre-UPDATE values
+PDU> restore upd <TxID>;         -- Restore pre-UPDATE values
 ```
 
 **Result**: Original values before `UPDATE` statement recovered from WAL.
@@ -199,13 +210,42 @@ PDU> restore upd users;          -- Restore pre-UPDATE values
 | `\dn;` | List schemas in current database |
 | `\dt;` | List tables in current schema |
 | `\d+ <table>;` | Describe table structure (columns, types) |
-| `unload <table>;` | Export table data to CSV |
-| `unload sch;` | Export all tables in current schema |
-| `unload ddl <table>;` | Export table DDL definition |
-| `scan <table>;` | Scan WAL archives for recovery candidates |
-| `restore del <table>;` | Restore deleted records from WAL |
-| `restore upd <table>;` | Restore pre-UPDATE values from WAL |
+| `\d <table>;` | Show table column types |
+| `u tab <table>;` / `unload tab <table>;` | Export one table to CSV |
+| `u sch <schema>;` / `unload sch <schema>;` | Export all tables in a schema |
+| `u ddl;` / `unload ddl;` | Generate DDL for the current schema |
+| `u copy;` / `unload copy;` | Generate COPY statements for exported CSVs |
+| `scan <table>;` | Scan WAL archives for DELETE/UPDATE records of one table |
+| `scan manual;` | Initialize metadata from files under the manual directory |
+| `scan drop;` | Scan WAL for dropped/truncated table metadata |
+| `meta tab <table>;` | Write one table's metadata to `tab.config` |
+| `meta sch <schema>;` | Write all table metadata for a schema to `tab.config` |
+| `restore del <TxID>;` | Restore deleted rows for one scanned transaction |
+| `restore upd <TxID>;` | Restore pre-UPDATE rows for one scanned transaction |
+| `restore del all;` / `restore upd all;` | Restore scanned results in time-range mode |
+| `add <filenode> <table> <columns>;` | Manually add table metadata; put data files in `restore/datafile` |
+| `restore db <db> <path>;` | Initialize a custom database directory (Pro/Enterprise) |
+| `dropscan idx;` / `ds idx;` | Build dropped-page index (Pro/Enterprise) |
+| `dropscan;` / `ds;` | Scan disk using tables in `tab.config` (Pro/Enterprise) |
+| `dropscan iso;` / `ds iso;` | Recover from an image file using tables in `tab.config` (Pro/Enterprise) |
+| `dropscan repair;` / `ds repair;` | Retry failed TOAST table scans (Pro/Enterprise) |
+| `dropscan clean;` / `ds clean;` | Clean `restore/dropscan` directories (Pro/Enterprise) |
+| `dropscan copy;` / `ds copy;` | Generate COPY commands for DropScan output (Pro/Enterprise) |
+| `p startwal <WAL>;` / `param startwal <WAL>;` | Set WAL scan start file |
+| `p endwal <WAL>;` / `param endwal <WAL>;` | Set WAL scan end file |
+| `p starttime <YYYY-MM-DD HH:MM:SS>;` / `param starttime <YYYY-MM-DD HH:MM:SS>;` | Set time-range recovery start time |
+| `p endtime <YYYY-MM-DD HH:MM:SS>;` / `param endtime <YYYY-MM-DD HH:MM:SS>;` | Set time-range recovery end time |
+| `p resmode tx\|time;` / `param resmode tx\|time;` | Set recovery mode |
+| `p restype delete\|update;` / `param restype delete\|update;` | Set recovery type |
+| `p exmode csv\|sql;` / `param exmode csv\|sql;` | Set export format |
+| `p encoding utf8\|gbk;` / `param encoding utf8\|gbk;` | Set output encoding |
+| `p isomode on\|off;` / `param isomode on\|off;` | Set image-save mode |
+| `reset <parameter>;` / `reset all;` | Reset one parameter or all parameters |
+| `show;` | Display current parameters |
+| `t;` | Display supported data types |
 | `exit;` / `\q;` | Exit PDU |
+
+All interactive commands must end with `;`.
 
 📖 **Full Reference**: [pduzc.com/docs](https://pduzc.com/docs)
 
@@ -558,7 +598,7 @@ PDU> \dn;                  -- 列出模式
 PDU> set public;           -- 切换模式
 PDU> \dt;                  -- 列出表
 PDU> \d+ customers;        -- 查看表结构
-PDU> unload customers;     -- 导出表为 CSV
+PDU> unload tab customers; -- 导出单表为 CSV
 ```
 
 📖 **完整指南**: [pduzc.com/quickstart](https://pduzc.com/quickstart)
@@ -576,7 +616,10 @@ PDU> unload customers;     -- 导出表为 CSV
 PDU> b;                          -- 初始化元数据
 PDU> use mydb;
 PDU> set public;
-PDU> unload sch;                 -- 导出模式中的所有表
+PDU> unload tab customers;       -- 导出单表
+PDU> unload sch public;          -- 导出模式中的所有表
+PDU> unload ddl;                 -- 生成当前模式的 DDL
+PDU> unload copy;                -- 为已导出的 CSV 生成 COPY 脚本
 ```
 
 **结果**：CSV 文件导出到当前目录，即使 PostgreSQL 无法启动。
@@ -591,11 +634,15 @@ PDU> unload sch;                 -- 导出模式中的所有表
 ```sql
 PDU> use production;
 PDU> set public;
+PDU> param restype delete;       -- 扫描 DELETE 记录
+PDU> param resmode tx;           -- 按事务号恢复
 PDU> scan orders;                -- 扫描 WAL 查找已删除的行
-PDU> restore del orders;         -- 恢复已删除的记录
+PDU> restore del <TxID>;         -- 根据扫描结果恢复指定事务
 ```
 
 **结果**：从 WAL 归档中恢复已删除的行并导出为 CSV。
+
+如需按时间区间恢复，先执行 `param resmode time;`，再设置 `param starttime <YYYY-MM-DD HH:MM:SS>;` 和 `param endtime <YYYY-MM-DD HH:MM:SS>;`，之后执行 `scan orders;` 与 `restore del all;`。
 
 ---
 
@@ -605,8 +652,12 @@ PDU> restore del orders;         -- 恢复已删除的记录
 
 **解决方案**：
 ```sql
+PDU> use production;
+PDU> set public;
+PDU> param restype update;       -- 扫描 UPDATE 记录
+PDU> param resmode tx;           -- 按事务号恢复
 PDU> scan users;
-PDU> restore upd users;          -- 恢复 UPDATE 前的值
+PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 ```
 
 **结果**：从 WAL 恢复 `UPDATE` 语句执行前的原始值。
@@ -626,13 +677,42 @@ PDU> restore upd users;          -- 恢复 UPDATE 前的值
 | `\dn;` | 列出当前数据库的模式 |
 | `\dt;` | 列出当前模式的表 |
 | `\d+ <表>;` | 查看表结构（列、类型） |
-| `unload <表>;` | 导出表数据为 CSV |
-| `unload sch;` | 导出当前模式的所有表 |
-| `unload ddl <表>;` | 导出表的 DDL 定义 |
-| `scan <表>;` | 扫描 WAL 归档查找恢复候选 |
-| `restore del <表>;` | 从 WAL 恢复已删除的记录 |
-| `restore upd <表>;` | 从 WAL 恢复 UPDATE 前的值 |
+| `\d <表>;` | 查看表列类型 |
+| `u tab <表>;` / `unload tab <表>;` | 导出单表为 CSV |
+| `u sch <模式>;` / `unload sch <模式>;` | 导出指定模式的所有表 |
+| `u ddl;` / `unload ddl;` | 生成当前模式的 DDL |
+| `u copy;` / `unload copy;` | 为已导出的 CSV 生成 COPY 语句 |
+| `scan <表>;` | 扫描单表的 DELETE/UPDATE WAL 记录 |
+| `scan manual;` | 从 manual 目录初始化元数据 |
+| `scan drop;` | 扫描被 DROP/TRUNCATE 的表结构 |
+| `meta tab <表>;` | 将指定表结构写入 `tab.config` |
+| `meta sch <模式>;` | 将指定模式下的所有表结构写入 `tab.config` |
+| `restore del <TxID>;` | 恢复扫描结果中的指定 DELETE 事务 |
+| `restore upd <TxID>;` | 恢复扫描结果中的指定 UPDATE 事务 |
+| `restore del all;` / `restore upd all;` | 在时间区间模式下恢复扫描结果 |
+| `add <filenode> <表名> <字段类型列表>;` | 手动添加表信息；数据文件需放入 `restore/datafile` |
+| `restore db <库名> <路径>;` | 初始化自定义数据库目录（Pro/Enterprise） |
+| `dropscan idx;` / `ds idx;` | 获取被 DROP 数据页索引（Pro/Enterprise） |
+| `dropscan;` / `ds;` | 按 `tab.config` 进行磁盘扫描恢复（Pro/Enterprise） |
+| `dropscan iso;` / `ds iso;` | 按 `tab.config` 从镜像文件恢复（Pro/Enterprise） |
+| `dropscan repair;` / `ds repair;` | 修复此前扫描失败的 TOAST 表恢复（Pro/Enterprise） |
+| `dropscan clean;` / `ds clean;` | 清理 `restore/dropscan` 目录（Pro/Enterprise） |
+| `dropscan copy;` / `ds copy;` | 为 DropScan 输出生成 COPY 命令（Pro/Enterprise） |
+| `p startwal <WAL>;` / `param startwal <WAL>;` | 设置 WAL 扫描起始文件 |
+| `p endwal <WAL>;` / `param endwal <WAL>;` | 设置 WAL 扫描结束文件 |
+| `p starttime <YYYY-MM-DD HH:MM:SS>;` / `param starttime <YYYY-MM-DD HH:MM:SS>;` | 设置时间区间恢复起始时间 |
+| `p endtime <YYYY-MM-DD HH:MM:SS>;` / `param endtime <YYYY-MM-DD HH:MM:SS>;` | 设置时间区间恢复结束时间 |
+| `p resmode tx\|time;` / `param resmode tx\|time;` | 设置恢复模式 |
+| `p restype delete\|update;` / `param restype delete\|update;` | 设置恢复类型 |
+| `p exmode csv\|sql;` / `param exmode csv\|sql;` | 设置导出格式 |
+| `p encoding utf8\|gbk;` / `param encoding utf8\|gbk;` | 设置输出编码 |
+| `p isomode on\|off;` / `param isomode on\|off;` | 设置镜像保存模式 |
+| `reset <参数名>;` / `reset all;` | 重置指定参数或全部参数 |
+| `show;` | 查看当前参数 |
+| `t;` | 查看支持的数据类型 |
 | `exit;` / `\q;` | 退出 PDU |
+
+所有交互式命令都必须以 `;` 结尾。
 
 📖 **完整参考**: [pduzc.com/docs](https://pduzc.com/docs)
 
