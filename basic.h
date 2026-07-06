@@ -41,7 +41,6 @@
 
 #define PG_VERSION_NUM 14
 
-//#define CN
 #define EN
 
 #define NUM_THREADS 1
