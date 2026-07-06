@@ -156,8 +156,6 @@ void META(char *type,char *objname);
 
 int dcProcIso(int itemNum,dropContext *dc,char *page,int *consecutiveUnmatched,int *scanState,off_t *currOffset,int isIdx);
 
-void bootstrap_abnormal();
-
 void dropScanISO(parray *dcs,int isToastRound);
 
 void DROP_SCAN(char *latter,char *third);
