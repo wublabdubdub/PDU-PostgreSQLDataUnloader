@@ -3510,52 +3510,6 @@ int copyFile(const char *src,const char *dest)
 
 }
 
-void replaceArchPath()
-{
-    char *srcname = "pdu.ini";
-    char *tmpname = "pdu.initmp";
-    FILE *srcFile = pdu_fopen(srcname, "r");
-    if (srcFile == NULL) {
-        return;
-    }
-    FILE *tmpFile = pdu_fopen(tmpname, "w");
-    if (tmpFile == NULL) {
-        fclose(srcFile);
-        return;
-    }
-
-    char line[1024];
-    const char *target = "ARCHIVE_DEST=";
-    const char *replacement = "ARCHIVE_DEST=restore/ckwal";
-    int found = 0;
-
-    while (fgets(line, sizeof(line), srcFile)) {
-        char *match = strstr(line, target);
-        if (match != NULL && !found) {
-            int prefixLen = match - line;
-            fwrite(line, 1, prefixLen, tmpFile);
-            fprintf(tmpFile, "%s", replacement);
-            char *afterMatch = match + strlen(target);
-            while (*afterMatch != '\0' && *afterMatch != '\n' && *afterMatch != '\r' && *afterMatch != ' ' && *afterMatch != '\t') {
-                afterMatch++;
-            }
-            fprintf(tmpFile, "%s", afterMatch);
-            found = 1;
-        } else {
-            fputs(line, tmpFile);
-        }
-    }
-
-    fclose(srcFile);
-    fclose(tmpFile);
-
-    remove(srcname);
-    if (rename(tmpname, srcname) != 0) {
-        perror("Error replacing file");
-        return;
-    }
-}
-
 void trim_whitespace(char *str) {
     if (str == NULL) return;
 

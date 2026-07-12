@@ -156,7 +156,6 @@
 #define CMD_SHOWTYPE 14
 #define CMD_DROPSCAN 15
 #define CMD_INFO 16
-#define CMD_CHECKWAL 17
 #define CMD_META 18
 
 #define CMD_EXIT 254
@@ -858,7 +857,6 @@ int is_address_valid(void *addr);
 
 int copyFile(const char *src,const char *dest);
 
-void replaceArchPath();
 
 void trim_whitespace(char *str);
 

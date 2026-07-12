@@ -21,7 +21,6 @@
 #include "dropscan_fs.h"
 
 void setRestypeNoShow(char *third);
-void CHECKWAL(void);
 void getSCHFromCLasstxt(char *filename);
 int ToastChunkforOid(const char *tuple_data, unsigned int tuple_size, uint32 *chunk_id, Oid *toastoid);
 void pgGetTxforArch();
@@ -692,11 +691,6 @@ void execCmd(int USR_CMD,char *former,char *latter,char *third,char *fourth)
 
     if( USR_CMD == CMD_SCAN ){
         SCAN(former,latter);
-        return;
-    }
-
-    if( USR_CMD == CMD_CHECKWAL ){
-        CHECKWAL();
         return;
     }
 
@@ -3775,86 +3769,6 @@ void META(char *type,char *objname){
 
     fclose(fp);
 
-}
-
-void CHECKWAL()
-{
-    char waldir[MAXPGPATH] = {0};
-    XLogSegNo	segno;
-    int WalSegSz;
-    int r;
-    cleanDir("restore/ckwal");
-    WALFILE *walDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
-    WALFILE *archDirFiles_array = (WALFILE*)pdu_malloc(sizeof(WALFILE)*2048);
-    if (walDirFiles_array == NULL || archDirFiles_array == NULL) {
-        free(walDirFiles_array);
-        free(archDirFiles_array);
-        return;
-    }
-    XLogLongPageHeader longhdr = NULL;
-    XLogDumpPrivate private;
-	memset(&private, 0, sizeof(XLogDumpPrivate));
-	private.timeline = 1;
-	private.startptr = InvalidXLogRecPtr;
-	private.endptr = InvalidXLogRecPtr;
-	private.endptr_reached = false;
-    initWalScan(RESTOREINIT,archDirFiles_array,walDirFiles_array);
-    PGAlignedXLogBlock buf;
-
-    int isMess = 0;
-    for(int j=0;j<archWaldirNum;j++){
-
-        char destPath[MAXPGPATH]={0};
-        char		fpath[MAXPGPATH];
-        snprintf(fpath, MAXPGPATH, "%s/%s", initArchPath, archDirFiles_array[j].walnames);
-        FILE *fp = fopen(fpath,"rb");
-        r = fread(buf.data,1,BLCKSZ,fp);
-        if (r == XLOG_BLCKSZ)
-        {
-            longhdr = (XLogLongPageHeader) buf.data;
-            WalSegSz = longhdr->xlp_seg_size;
-            XLogFromFileName(archDirFiles_array[j].walnames, &private.timeline, &segno, WalSegSz);
-            private.startptr = longhdr->std.xlp_pageaddr;
-            private.endptr = private.startptr + WalSegSz*2;
-        }
-        XLByteToSeg(private.startptr, segno, WalSegSz);
-        char ptrfName[50]={0};
-        XLogFileName(ptrfName, private.timeline, segno, WalSegSz);
-
-        if(strcmp(ptrfName,archDirFiles_array[j].walnames) != 0){
-            isMess = 1;
-        }
-        if(isMess){
-            snprintf(waldir, sizeof(waldir), "restore/ckwal");
-            snprintf(destPath, sizeof(destPath), "%s/%s",waldir,ptrfName);
-            int ret = copyFile(fpath,destPath);
-            if(ret == EXIT_FAILURE){
-                return;
-            }
-            printf("%s%s -> %s%s\n",C_PURPLE2,archDirFiles_array[j].walnames,ptrfName,C_RESET);
-        }
-        else{
-            snprintf(waldir, sizeof(waldir), "restore/ckwal");
-            snprintf(destPath, sizeof(destPath), "%s/%s",waldir,archDirFiles_array[j].walnames);
-            int ret = copyFile(fpath,destPath);
-            if(ret == EXIT_FAILURE){
-                return;
-            }
-            printf("%s%s -> %s%s\n",C_PURPLE2,archDirFiles_array[j].walnames,ptrfName,C_RESET);
-        }
-
-    }
-    if(!isMess){
-        cleanDir("restore/ckwal");
-    }
-    free(walDirFiles_array);
-    free(archDirFiles_array);
-    walDirFiles_array = NULL;
-    archDirFiles_array = NULL;
-    harray_free(TxXman_harray);
-    parray_free(TxSaved_paaray);
-    TxXman_harray = NULL;
-    TxSaved_paaray = NULL;
 }
 
 void setSrtWalname(char *third)

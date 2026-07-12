@@ -11,7 +11,6 @@
  * see LICENSE.
  */
 #include <string.h>
-#include <assert.h>
 #include "basic.h"
 #include "stringinfo.h"
 
@@ -30,6 +29,8 @@ initStringInfo(StringInfo str)
 {
 	int			size = 1024;
 
+	if (str == NULL)
+		return;
 	str->data = (char *) pdu_malloc(size);
 	if (!str->data) {
 		str->maxlen = 0;
@@ -52,6 +53,8 @@ initStringInfo(StringInfo str)
 void
 resetStringInfo(StringInfo str)
 {
+	if (str == NULL || str->data == NULL)
+		return;
 	str->data[0] = '\0';
 	memset(str->data,0,str->maxlen);
 	str->len = 0;
@@ -69,6 +72,8 @@ resetStringInfo(StringInfo str)
 void
 appendStringInfoString(StringInfo str, const char *s)
 {
+	if (s == NULL)
+		return;
 	appendBinaryStringInfo(str, s, strlen(s));
 }
 
@@ -85,7 +90,8 @@ appendStringInfoString(StringInfo str, const char *s)
 void
 appendBinaryStringInfo(StringInfo str, const char *data, int datalen)
 {
-	assert(str != NULL);
+	if (str == NULL || str->data == NULL || data == NULL || datalen <= 0)
+		return;
 
 	enlargeStringInfo(str, datalen);
 
@@ -113,6 +119,9 @@ enlargeStringInfo(StringInfo str, int needed)
 	Size		newlen;
 	Size		limit;
 	char	   *old_data;
+
+	if (str == NULL || str->data == NULL)
+		return;
 
 	limit = MaxAllocSize;
 
@@ -164,6 +173,8 @@ enlargeStringInfo(StringInfo str, int needed)
 void
 appendStringInfoChar(StringInfo str, char ch)
 {
+	if (str == NULL || str->data == NULL)
+		return;
 	if (str->len + 1 >= str->maxlen)
 		enlargeStringInfo(str, 1);
 
@@ -185,6 +196,11 @@ makeStringInfo(void)
 	StringInfo	res;
 
 	res = (StringInfo) malloc(sizeof(StringInfoData));
+	if (res == NULL)
+	{
+		printf("Error: malloc() FAIL!\n");
+		exit(1);
+	}
 
 	initStringInfo(res);
 

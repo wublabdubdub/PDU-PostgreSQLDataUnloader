@@ -62,7 +62,6 @@ int parseCmd(char command[MiddleAllocSize])
               strncmp(command, "info",4) == 0 ||
               strncmp(command, "restore", 7) == 0 || 
               strncmp(command,"ds",2) == 0 ||
-              strcmp(command,"ckwal") == 0 ||
               strncmp(command,"meta",4) == 0 ||
               shortCMDMatched(command)
               )
@@ -125,9 +124,6 @@ int parseCmd(char command[MiddleAllocSize])
         }
         else if( strcmp(former,"restore")==0 ){
             USR_CMD=CMD_RESTORE;
-        }
-        else if( strcmp(former,"ckwal")==0 ){
-            USR_CMD=CMD_CHECKWAL;
         }
         else if( strcmp(former,"meta")==0 ){
             USR_CMD=CMD_META;
@@ -195,19 +191,41 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc > 1) {
-        char *cmd_str = (char *)malloc(10240 * sizeof(char));
-        cmd_str[0] = '\0';
+        size_t total_len = 2;
+        char *cmd_str;
+        char *write_pos;
 
         for (int i = 1; i < argc; i++) {
-            strcat(cmd_str, argv[i]);
-            if (i < argc - 1) {
-                strcat(cmd_str, " ");
+            size_t arg_len = strlen(argv[i]);
+            if ((size_t)-1 - total_len < arg_len + 1) {
+                fprintf(stderr, "command line is too long\n");
+                exit(1);
             }
+            total_len += arg_len + 1;
         }
 
-        size_t len = strlen(cmd_str);
+        cmd_str = (char *)malloc(total_len);
+        if (cmd_str == NULL) {
+            perror("malloc");
+            exit(1);
+        }
+        cmd_str[0] = '\0';
+        write_pos = cmd_str;
+
+        for (int i = 1; i < argc; i++) {
+            size_t arg_len = strlen(argv[i]);
+            memcpy(write_pos, argv[i], arg_len);
+            write_pos += arg_len;
+            if (i < argc - 1) {
+                *write_pos++ = ' ';
+            }
+        }
+        *write_pos = '\0';
+
+        size_t len = (size_t)(write_pos - cmd_str);
         if (len > 0 && cmd_str[len - 1] != ';') {
-            strcat(cmd_str, ";");
+            *write_pos++ = ';';
+            *write_pos = '\0';
         }
 
         execute_command_string(cmd_str);

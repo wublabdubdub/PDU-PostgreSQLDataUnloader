@@ -43,9 +43,15 @@ void *
 pgut_malloc(size_t size)
 {
 	char *ret;
+
+	if (size == 0)
+		size = 1;
 	if ((ret = malloc(size)) == NULL)
+	{
 		printf("could not allocate memory (%lu bytes)",
 			(unsigned long) size);
+		exit(EXIT_FAILURE);
+	}
 	return ret;
 }
 
@@ -65,9 +71,14 @@ pgut_realloc(void *p, size_t size)
 {
 	char *ret;
 
+	if (size == 0)
+		size = 1;
 	if ((ret = realloc(p, size)) == NULL)
+	{
 		printf( "could not re-allocate memory (%lu bytes)",
 			(unsigned long) size);
+		exit(EXIT_FAILURE);
+	}
 	return ret;
 }
 
@@ -108,7 +119,7 @@ parray_expand(parray *array, size_t newsize)
 {
 	void **p;
 
-	if (newsize <= array->alloced)
+	if (array == NULL || newsize <= array->alloced)
 		return;
 
 	p = pgut_realloc(array->data, sizeof(void *) * newsize);
@@ -148,8 +159,10 @@ parray_free(parray *array)
 void
 parray_append(parray *array, void *elem)
 {
+	if (array == NULL)
+		return;
 	if (array->used + 1 > array->alloced)
-		parray_expand(array, array->alloced * 2);
+		parray_expand(array, array->alloced == 0 ? 1 : array->alloced * 2);
 
 	array->data[array->used++] = elem;
 }
@@ -167,17 +180,18 @@ parray_append(parray *array, void *elem)
 void
 parray_insert(parray *array, size_t index, void *elem)
 {
+	if (array == NULL)
+		return;
+	if (index > array->used)
+		index = array->used;
 	if (array->used + 1 > array->alloced)
-		parray_expand(array, array->alloced * 2);
+		parray_expand(array, array->alloced == 0 ? 1 : array->alloced * 2);
 
-	memmove(array->data + index + 1, array->data + index,
-		(array->alloced - index - 1) * sizeof(void *));
+	if (index < array->used)
+		memmove(array->data + index + 1, array->data + index,
+			(array->used - index) * sizeof(void *));
 	array->data[index] = elem;
-
-	if (array->used < index + 1)
-		array->used = index + 1;
-	else
-		array->used++;
+	array->used++;
 }
 
 /**
@@ -194,6 +208,8 @@ parray_insert(parray *array, size_t index, void *elem)
 parray *
 parray_concat(parray *dest, const parray *src)
 {
+	if (dest == NULL || src == NULL || src->used == 0)
+		return dest;
 	parray_expand(dest, dest->used + src->used);
 
 	memcpy(dest->data + dest->used, src->data, src->used * sizeof(void *));
@@ -215,7 +231,9 @@ parray_concat(parray *dest, const parray *src)
 void
 parray_set(parray *array, size_t index, void *elem)
 {
-	if (index > array->alloced - 1)
+	if (array == NULL)
+		return;
+	if (index >= array->alloced)
 		parray_expand(array, index + 1);
 
 	array->data[index] = elem;
@@ -235,7 +253,7 @@ parray_set(parray *array, size_t index, void *elem)
 void *
 parray_get(const parray *array, size_t index)
 {
-	if (index > array->alloced - 1)
+	if (array == NULL || index >= array->used)
 		return NULL;
 	return array->data[index];
 }
@@ -256,16 +274,17 @@ parray_remove(parray *array, size_t index)
 {
 	void *val;
 
-	if (index > array->used)
+	if (array == NULL || index >= array->used)
 		return NULL;
 
 	val = array->data[index];
 
-	if (index < array->alloced - 1)
+	if (index + 1 < array->used)
 		memmove(array->data + index, array->data + index + 1,
-			(array->alloced - index - 1) * sizeof(void *));
+			(array->used - index - 1) * sizeof(void *));
 
 	array->used--;
+	array->data[array->used] = NULL;
 
 	return val;
 }
@@ -322,6 +341,8 @@ parray_num(const parray *array)
 void
 parray_qsort(parray *array, int(*compare)(const void *, const void *))
 {
+	if (array == NULL || compare == NULL)
+		return;
 	qsort(array->data, array->used, sizeof(void *), compare);
 }
 
@@ -337,6 +358,8 @@ void
 parray_walk(parray *array, void (*action)(void *))
 {
 	int i;
+	if (array == NULL || action == NULL)
+		return;
 	for (i = 0; i < array->used; i++)
 		action(array->data[i]);
 }
@@ -355,6 +378,8 @@ parray_walk(parray *array, void (*action)(void *))
 void *
 parray_bsearch(parray *array, const void *key, int(*compare)(const void *, const void *))
 {
+	if (array == NULL || compare == NULL)
+		return NULL;
 	return bsearch(&key, array->data, array->used, sizeof(void *), compare);
 }
 
