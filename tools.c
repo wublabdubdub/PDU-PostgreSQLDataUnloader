@@ -319,6 +319,8 @@ void getAttrTypForm(char attr[10240],char typ[10240],char attmod[10240])
         int x;
         for( x=0;x<i;x++){
             char *ddlcolname = quotedIfUpper(attrArr[x]);
+            if (ddlcolname == NULL)
+                continue;
             if (strcmp(typArr[x],"numeric") == 0 && strcmp(modArr[x],"()") != 0){
                 char a[10]="";
                 char b[10]="";
@@ -351,6 +353,7 @@ void getAttrTypForm(char attr[10240],char typ[10240],char attmod[10240])
                     }
                 }
             }
+            free(ddlcolname);
         }
     }
 }
@@ -418,6 +421,8 @@ void ata2DDL(char attr[10240],char typ[10240],char attmod[10240],FILE *ddl)
         int x;
         for( x=0;x<i;x++){
             char *ddlcolname = quotedIfUpper(attrArr[x]);
+            if (ddlcolname == NULL)
+                continue;
             if(strcmp(modArr[x],"()") == 0){
                 if(x == i-1){
                     snprintf(tmp, sizeof(tmp), "\t%s %s\n",ddlcolname,typArr[x]);
@@ -464,6 +469,7 @@ void ata2DDL(char attr[10240],char typ[10240],char attmod[10240],FILE *ddl)
                 }
             }
             fputs(tmp,ddl);
+            free(ddlcolname);
         }
     }
 }
@@ -1672,13 +1678,30 @@ void cleanPadding(const char *buffer, unsigned int *buff_size,int *padding,int *
 
 char *xman2Insertxman(char *xman,char *tablename)
 {
-    char *xmanRet = (char*)pdu_malloc(sizeof(char)*(strlen(xman)+250));
-    if (xmanRet == NULL) {
+    char *xmanRet;
+    char *qoutedTablename;
+    int needed;
+
+    if (xman == NULL || tablename == NULL)
+        return NULL;
+    qoutedTablename = quotedIfUpper(tablename);
+    if (qoutedTablename == NULL)
+        return NULL;
+    needed = snprintf(NULL, 0, "INSERT INTO %s VALUES(%s);",
+                      qoutedTablename, xman);
+    if (needed < 0) {
+        free(qoutedTablename);
         return NULL;
     }
-    memset(xmanRet,0,strlen(xman)+250);
-    char *qoutedTablename=quotedIfUpper(tablename);
-    snprintf(xmanRet, 10240,  "INSERT INTO %s VALUES(%s);",qoutedTablename,xman);    return xmanRet;
+    xmanRet = pdu_malloc((size_t) needed + 1);
+    if (xmanRet == NULL) {
+        free(qoutedTablename);
+        return NULL;
+    }
+    snprintf(xmanRet, (size_t) needed + 1, "INSERT INTO %s VALUES(%s);",
+             qoutedTablename, xman);
+    free(qoutedTablename);
+    return xmanRet;
 }
 
 char *xman2Updatexman(parray *newxman_arr,parray *oldxman_arr,pg_attributeDesc *allDesc,char *tabname)
@@ -2403,11 +2426,17 @@ void mergeToast(char *PATH,char *toastfile)
 }
 
 char* quotedIfUpper(const char* input){
-    int len = strlen(input);
+    size_t len;
     int hasUpper = 0;
 
-    for (int i = 0; i < len; i++) {
-        if (isupper(input[i])) {
+    if (input == NULL)
+        return NULL;
+    len = strlen(input);
+    if (len > SIZE_MAX - 3)
+        return NULL;
+
+    for (size_t i = 0; i < len; i++) {
+        if (isupper((unsigned char) input[i])) {
             hasUpper = 1;
             break;
         }
@@ -2416,17 +2445,18 @@ char* quotedIfUpper(const char* input){
     char* result;
     if (hasUpper) {
         result = (char*)malloc(len + 3);
-        if (result == NULL) {
-            printf("Memory allocation failed.\n");
-            exit(1);
-        }
-        snprintf(result, 3, "\"%s\"", input);    } else {
+        if (result == NULL)
+            return NULL;
+        result[0] = '"';
+        memcpy(result + 1, input, len);
+        result[len + 1] = '"';
+        result[len + 2] = '\0';
+    } else {
         result = (char*)malloc(len + 1);
-        if (result == NULL) {
-            printf("Memory allocation failed.\n");
-            exit(1);
-        }
-        snprintf(result, 1, "%s", input);    }
+        if (result == NULL)
+            return NULL;
+        memcpy(result, input, len + 1);
+    }
 
     return result;
 }

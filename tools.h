@@ -781,6 +781,7 @@ void mergeToast(char *PATH,char *toastfile);
 
 int* findMinMaxNumbers(const char* path);
 
+/* Returns a newly allocated identifier string; the caller must free it. */
 char* quotedIfUpper(const char* input);
 
 int get_system_uuid(char *uuid);

@@ -1915,6 +1915,8 @@ void DESC(char *former,char *latter){
 
                 if(strcmp(descTyp,"\\d+") == 0){
                     char *ddltabname = quotedIfUpper(taboid[i].tab);
+                    if (ddltabname == NULL)
+                        continue;
 
                     infoDescHeader(1);
                     printf("   CREATE TABLE %s (\n",ddltabname);
@@ -1924,6 +1926,7 @@ void DESC(char *former,char *latter){
                     printf("%s│                                                              │%s\n",COLOR_TABLE,C_RESET);
                     printf("%s└──────────────────────────────────────────────────────────────┘%s\n",COLOR_TABLE,C_RESET);
 
+                    free(ddltabname);
                 }
                 else if(strcmp(descTyp,"\\d") == 0){
                     char res[10240]="";
@@ -3268,7 +3271,13 @@ void unloadCOPY(char *schemaname){
             tabName[len] = '\0';
         }
         char *tabNameProcessed = quotedIfUpper(tabName);
-        snprintf(str2write, 1024,  "COPY %s FROM '%s/%s';\n",tabNameProcessed,fullPath,filenames[i]);        fputs(str2write,copyfp);
+        if (tabNameProcessed == NULL)
+            continue;
+        snprintf(str2write, sizeof(str2write),
+                 "COPY %s FROM '%s/%s';\n",
+                 tabNameProcessed,fullPath,filenames[i]);
+        fputs(str2write,copyfp);
+        free(tabNameProcessed);
     }
 
     fclose(copyfp);
@@ -3303,9 +3312,12 @@ void unloadSCHDDL()
     for ( i = 0; i < tabSize; i++ ) {
         char msg_begin[200]="";
         char *ddltabname = quotedIfUpper(taboid[i].tab);
+        if (ddltabname == NULL)
+            continue;
         snprintf(msg_begin, sizeof(msg_begin), "CREATE TABLE %s(\n",ddltabname);
 
         fputs(msg_begin,ddl);
+        free(ddltabname);
 
         char attr[10240]="";
         snprintf(attr, sizeof(attr), "%s", taboid[i].attr);
