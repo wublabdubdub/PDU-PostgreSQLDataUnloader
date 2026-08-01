@@ -757,9 +757,14 @@ DBstruct* bootDBStruct(char *filename,int isCompleted)
     if ( ! isCompleted ){
         int i;
         for (i = 0; i < numLines; i++) {
-            int ret = fscanf(file, "%s\t%s\t%s", databaseoid[i].oid, databaseoid[i].database, databaseoid[i].tbloid);
-            if (!(ret != 3 || ret != 4)) {
-                perror("Error reading file");
+            PduScanField fields[] = {
+                PDU_SCAN_FIELD(databaseoid[i].oid),
+                PDU_SCAN_FIELD(databaseoid[i].database),
+                PDU_SCAN_FIELD(databaseoid[i].tbloid)
+            };
+            if (pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+                (int) PDU_SCAN_FIELD_COUNT(fields)) {
+                fprintf(stderr, "Error reading file %s: invalid or oversized metadata field\n", filename);
                 exit(1);
             }
         }
@@ -767,8 +772,15 @@ DBstruct* bootDBStruct(char *filename,int isCompleted)
     else{
         int i;
         for (i = 0; i < numLines; i++) {
-            if (fscanf(file, "%s\t%s\t%s\t%s", databaseoid[i].oid, databaseoid[i].database, databaseoid[i].tbloid, databaseoid[i].dbpath) != 4) {
-                perror("Error reading file");
+            PduScanField fields[] = {
+                PDU_SCAN_FIELD(databaseoid[i].oid),
+                PDU_SCAN_FIELD(databaseoid[i].database),
+                PDU_SCAN_FIELD(databaseoid[i].tbloid),
+                PDU_SCAN_FIELD(databaseoid[i].dbpath)
+            };
+            if (pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+                (int) PDU_SCAN_FIELD_COUNT(fields)) {
+                fprintf(stderr, "Error reading file %s: invalid or oversized metadata field\n", filename);
                 exit(1);
             }
         }
@@ -792,6 +804,10 @@ harray* bootAttrStruct(char *filename){
     int numLines = 0;
     FILE *file = fileGetLines(filename,&numLines);
 
+    if (file == NULL) {
+        return NULL;
+    }
+
     harray *attr_harray=NULL;
     attr_harray = harray_new(HARRAYATTR);
 
@@ -803,11 +819,18 @@ harray* bootAttrStruct(char *filename){
             perror("malloc failed for oneattroid\n");
             exit(1);
         }
-        if (fscanf(file, "%s\t%s\t%s\t%s\t%s\t%s\t%s", oneattroid->relid, oneattroid->attr,
-                                                        oneattroid->typid, oneattroid->attlen,
-                                                        oneattroid->attrnum, oneattroid->attrmod,
-                                                        oneattroid->attalign) != 7) {
-            perror("Error reading file");
+        PduScanField fields[] = {
+            PDU_SCAN_FIELD(oneattroid->relid),
+            PDU_SCAN_FIELD(oneattroid->attr),
+            PDU_SCAN_FIELD(oneattroid->typid),
+            PDU_SCAN_FIELD(oneattroid->attlen),
+            PDU_SCAN_FIELD(oneattroid->attrnum),
+            PDU_SCAN_FIELD(oneattroid->attrmod),
+            PDU_SCAN_FIELD(oneattroid->attalign)
+        };
+        if (pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+            (int) PDU_SCAN_FIELD_COUNT(fields)) {
+            fprintf(stderr, "Error reading file %s: invalid or oversized metadata field\n", filename);
             exit(1);
         }
 
@@ -842,9 +865,21 @@ TABstruct* bootTabStruct(char *filename,int isCompleted){
     }
 
     if ( ! isCompleted ){
-        int i=0;
-        while (!feof(file)){
-            fscanf(file, "%s\t%s\t%s\t%s\t%s\t%s\n", taboid[i].oid, taboid[i].tab, taboid[i].nsp, taboid[i].filenode, taboid[i].toastoid, taboid[i].nattr);
+        int i;
+        for (i = 0; i < numLines; i++) {
+            PduScanField fields[] = {
+                PDU_SCAN_FIELD(taboid[i].oid),
+                PDU_SCAN_FIELD(taboid[i].tab),
+                PDU_SCAN_FIELD(taboid[i].nsp),
+                PDU_SCAN_FIELD(taboid[i].filenode),
+                PDU_SCAN_FIELD(taboid[i].toastoid),
+                PDU_SCAN_FIELD(taboid[i].nattr)
+            };
+            if (pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+                (int) PDU_SCAN_FIELD_COUNT(fields)) {
+                fprintf(stderr, "Error reading file %s: invalid or oversized metadata field\n", filename);
+                exit(1);
+            }
             if(toastTaboid_harray != NULL){
                 if(strncmp(taboid[i].tab,"pg_toast_",9) == 0){
                     uint32 toastindex = atoi(taboid[i].oid);
@@ -858,18 +893,30 @@ TABstruct* bootTabStruct(char *filename,int isCompleted){
                     harray_append(toastTaboid_harray,HARRAYTAB,ontaboid,toastindex);
                 }
             }
-            i++;
         }
     }
     else{
         int i;
         for (i = 0; i < numLines; i++) {
-            fscanf(file, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",taboid[i].oid,taboid[i].filenode,
-                                                                        taboid[i].toastoid, taboid[i].toastnode,
-                                                                        taboid[i].nsp,taboid[i].tab,
-                                                                        taboid[i].attr,taboid[i].typ,
-                                                                        taboid[i].nattr,taboid[i].attmod,
-                                                                        taboid[i].attlen,taboid[i].attalign);
+            PduScanField fields[] = {
+                PDU_SCAN_FIELD(taboid[i].oid),
+                PDU_SCAN_FIELD(taboid[i].filenode),
+                PDU_SCAN_FIELD(taboid[i].toastoid),
+                PDU_SCAN_FIELD(taboid[i].toastnode),
+                PDU_SCAN_FIELD(taboid[i].nsp),
+                PDU_SCAN_FIELD(taboid[i].tab),
+                PDU_SCAN_FIELD(taboid[i].attr),
+                PDU_SCAN_FIELD(taboid[i].typ),
+                PDU_SCAN_FIELD(taboid[i].nattr),
+                PDU_SCAN_FIELD(taboid[i].attmod),
+                PDU_SCAN_FIELD(taboid[i].attlen),
+                PDU_SCAN_FIELD(taboid[i].attalign)
+            };
+            if (pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+                (int) PDU_SCAN_FIELD_COUNT(fields)) {
+                fprintf(stderr, "Error reading file %s: invalid or oversized metadata field\n", filename);
+                exit(1);
+            }
         }
     }
     fclose(file);
@@ -899,8 +946,13 @@ SCHstruct* bootSCHStruct(char *filename){
     }
     int i;
     for (i = 0; i < numLines; i++) {
-        if (fscanf(file, "%s\t%s", schoid[i].oid, schoid[i].nspname) != 2) {
-            printf("Error Reading File %s\n",filename);
+        PduScanField fields[] = {
+            PDU_SCAN_FIELD(schoid[i].oid),
+            PDU_SCAN_FIELD(schoid[i].nspname)
+        };
+        if (pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+            (int) PDU_SCAN_FIELD_COUNT(fields)) {
+            fprintf(stderr, "Error reading file %s: invalid or oversized metadata field\n", filename);
             exit(1);
         }
     }
@@ -921,6 +973,10 @@ SCHstruct* bootSCHStruct(char *filename){
 TYPstruct* bootTYPStruct(char *filename){
     int numLines = 0;
     FILE *file = fileGetLines(filename,&numLines);
+    if(file == NULL){
+        ErrorFileNotExist(filename);
+        return NULL;
+    }
     TYPstruct *typoid = (TYPstruct *)pdu_malloc(numLines * sizeof(TYPstruct));
     if (typoid == NULL) {
         perror("Memory allocation failed");
@@ -928,8 +984,13 @@ TYPstruct* bootTYPStruct(char *filename){
     }
     int i;
     for (i = 0; i < numLines; i++) {
-        if (fscanf(file, "%s\t%s", typoid[i].oid, typoid[i].typname) != 2) {
-            printf("Error Reading File %s",filename);
+        PduScanField fields[] = {
+            PDU_SCAN_FIELD(typoid[i].oid),
+            PDU_SCAN_FIELD(typoid[i].typname)
+        };
+        if (pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+            (int) PDU_SCAN_FIELD_COUNT(fields)) {
+            fprintf(stderr, "Error reading file %s: invalid or oversized metadata field\n", filename);
             exit(1);
         }
     }

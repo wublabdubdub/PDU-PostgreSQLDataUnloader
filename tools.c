@@ -829,26 +829,14 @@ int attrIsDropped(char *a)
 
 FILE* fileGetLines(char *filename,int *numlines)
 {
-    int charappreaed = 0;
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
         return NULL;
     }
-    char ch;
-    while ((ch = fgetc(file)) != EndOfFile) {
-        charappreaed = 1;
-        if (ch == '\n') {
-            *numlines = *numlines +1;
-        }
-        if (ch == '\r'){
-            break;
-        }
+    if (pdu_count_file_lines(file, numlines) != 0) {
+        fclose(file);
+        return NULL;
     }
-
-    if(*numlines == 0 && charappreaed == 1)
-        *numlines = *numlines +1;
-
-    fseek(file, 0, SEEK_SET);
     return file;
 }
 

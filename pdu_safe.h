@@ -11,6 +11,98 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
+#include <limits.h>
+
+typedef struct PduScanField
+{
+    char *data;
+    size_t capacity;
+} PduScanField;
+
+#define PDU_SCAN_FIELD(value) { (value), sizeof(value) }
+#define PDU_SCAN_FIELD_COUNT(values) (sizeof(values) / sizeof((values)[0]))
+
+/*
+ * Read whitespace-delimited fields without allowing a token to overflow its
+ * destination.  This preserves fscanf("%s") semantics for metadata files,
+ * while making the destination capacity explicit at every call site.
+ */
+static inline int pdu_scan_fields(FILE *file, PduScanField *fields,
+                                  size_t field_count)
+{
+    size_t i;
+
+    if (file == NULL || fields == NULL || field_count > INT_MAX) {
+        return -1;
+    }
+
+    for (i = 0; i < field_count; i++) {
+        int ch;
+        size_t length = 0;
+        int overflow = 0;
+
+        if (fields[i].data == NULL || fields[i].capacity == 0) {
+            return -1;
+        }
+
+        do {
+            ch = fgetc(file);
+        } while (ch != EOF && isspace((unsigned char) ch));
+
+        if (ch == EOF) {
+            return (int) i;
+        }
+
+        do {
+            if (length + 1 < fields[i].capacity) {
+                fields[i].data[length++] = (char) ch;
+            } else {
+                overflow = 1;
+            }
+            ch = fgetc(file);
+        } while (ch != EOF && !isspace((unsigned char) ch));
+
+        fields[i].data[length] = '\0';
+        if (overflow) {
+            return -1;
+        }
+    }
+
+    return (int) field_count;
+}
+
+static inline int pdu_count_file_lines(FILE *file, int *line_count)
+{
+    size_t count = 0;
+    int ch;
+    int last = EOF;
+
+    if (file == NULL || line_count == NULL) {
+        return -1;
+    }
+
+    while ((ch = fgetc(file)) != EOF) {
+        if (ch == '\n') {
+            count++;
+        }
+        last = ch;
+    }
+
+    if (ferror(file)) {
+        return -1;
+    }
+    if (last != EOF && last != '\n') {
+        count++;
+    }
+    if (count > INT_MAX) {
+        return -1;
+    }
+
+    *line_count = (int) count;
+    rewind(file);
+    return 0;
+}
 
 static inline void *pdu_malloc(size_t size)
 {
