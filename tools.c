@@ -187,16 +187,66 @@ void trimLastValue(const char* str1, char* str2)
     str2[j] = '\0';
 }
 
-void getStdTyp(char *str,char *ret)
+int getStdTyp(const char *str, char *ret, size_t ret_size)
 {
     int size = sizeof(typmap_table)/sizeof(typmap_table[0]);
     int i;
+
+    if (str == NULL || ret == NULL || ret_size == 0) {
+        return FAILURE_RET;
+    }
+
     for ( i=0;i<size;i++ ){
         if ( strcmp(typmap_table[i].oriTyp,str) == 0 ){
-            snprintf(ret, 10240,  "%s", typmap_table[i].stdTyp);            return;
+            int written = snprintf(ret, ret_size, "%s", typmap_table[i].stdTyp);
+            return written >= 0 && (size_t) written < ret_size
+                ? SUCCESS_RET : FAILURE_RET;
         }
     }
-    snprintf(ret, 10240,  "%s", str);}
+    int written = snprintf(ret, ret_size, "%s", str);
+    return written >= 0 && (size_t) written < ret_size
+        ? SUCCESS_RET : FAILURE_RET;
+}
+
+int readChunkInfo(FILE *file, chunkInfo *result)
+{
+    char toastOid[20];
+    char chunkId[20];
+    char block[20];
+    char itemOffset[20];
+    char suffix[20];
+    PduScanField fields[] = {
+        PDU_SCAN_FIELD(toastOid),
+        PDU_SCAN_FIELD(chunkId),
+        PDU_SCAN_FIELD(block),
+        PDU_SCAN_FIELD(itemOffset),
+        PDU_SCAN_FIELD(suffix)
+    };
+    uint32_t parsedToastOid;
+    uint32_t parsedChunkId;
+    uint32_t parsedBlock;
+    uint32_t parsedItemOffset;
+    int parsedSuffix;
+
+    if (result == NULL ||
+        pdu_scan_fields(file, fields, PDU_SCAN_FIELD_COUNT(fields)) !=
+            (int) PDU_SCAN_FIELD_COUNT(fields) ||
+        pdu_parse_uint32(toastOid, &parsedToastOid) != 0 ||
+        pdu_parse_uint32(chunkId, &parsedChunkId) != 0 ||
+        pdu_parse_uint32(block, &parsedBlock) != 0 ||
+        pdu_parse_uint32(itemOffset, &parsedItemOffset) != 0 ||
+        parsedItemOffset > UINT16_MAX ||
+        pdu_parse_int(suffix, &parsedSuffix) != 0) {
+        return FAILURE_RET;
+    }
+
+    result->toid = (Oid) parsedToastOid;
+    result->chunkid = (uint32) parsedChunkId;
+    result->blk = (BlockNumber) parsedBlock;
+    result->toff = (OffsetNumber) parsedItemOffset;
+    result->suffix = parsedSuffix;
+    return SUCCESS_RET;
+}
 
 /**
  * createDir - Create directory if not exists
@@ -634,8 +684,16 @@ void genCopy(char *csvpath,FILE *copyfp){
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
             if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                strncpy(filenames[file_count], findFileData.cFileName, MAX_FILENAME_LENGTH - 1);
-                filenames[file_count][MAX_FILENAME_LENGTH - 1] = '\0';
+                if (file_count >= MAX_FILES) {
+                    fprintf(stderr, "Too many files in %s (maximum %d)\n",
+                            csvpath, MAX_FILES);
+                    break;
+                }
+                if (pdu_copy_string(filenames[file_count], MAX_FILENAME_LENGTH,
+                                    findFileData.cFileName) != 0) {
+                    fprintf(stderr, "Skipping oversized filename in %s\n", csvpath);
+                    continue;
+                }
                 file_count++;
             }
         } while (FindNextFile(hFind, &findFileData) != 0);
@@ -660,10 +718,20 @@ void genCopy(char *csvpath,FILE *copyfp){
         while ((entry1 = readdir(dir1)) != NULL) {
 
             if (entry1->d_type == 8) {
-                strcpy(filenames[file_count],entry1->d_name);
+                if (file_count >= MAX_FILES) {
+                    fprintf(stderr, "Too many files in %s (maximum %d)\n",
+                            csvpath, MAX_FILES);
+                    break;
+                }
+                if (pdu_copy_string(filenames[file_count], MAX_FILENAME_LENGTH,
+                                    entry1->d_name) != 0) {
+                    fprintf(stderr, "Skipping oversized filename in %s\n", csvpath);
+                    continue;
+                }
                 file_count++;
             }
         }
+        closedir(dir1);
     }
 #endif
 
@@ -3198,15 +3266,30 @@ void genCopyForDs(char *tabname)
                    strcmp(entry1->d_name,"Error.csv") != 0 &&
                    strcmp(entry1->d_name,".rec") != 0 )
                    {
-                        strcpy(filenames[file_count],entry1->d_name);
+                        if (file_count >= MAXPGPATH) {
+                            fprintf(stderr, "Too many files in %s (maximum %d)\n",
+                                    fullPath, MAXPGPATH);
+                            break;
+                        }
+                        if (pdu_copy_string(filenames[file_count], MAX_FILENAME_LENGTH,
+                                            entry1->d_name) != 0) {
+                            fprintf(stderr, "Skipping oversized filename in %s\n",
+                                    fullPath);
+                            continue;
+                        }
                         file_count++;
                    }
             }
         }
+        closedir(dir1);
     }
     char copyFilename[MAXPGPATH]={0};
     snprintf(copyFilename, sizeof(copyFilename), "%s/COPY.sql",fullPath);
     FILE *copyfp = fopen(copyFilename,"w");
+    if (copyfp == NULL) {
+        perror("Failed to create COPY.sql");
+        return;
+    }
     if(file_count > 0){
         for (int i = 0; i < file_count; i++) {
             char *str2write=malloc(MAXPGPATH);
@@ -3242,21 +3325,14 @@ void initToastHashforDs(dropContext *dc)
 
     int i;
     for (i = 0; i < numLines; i++) {
-        chunkInfo *elem = malloc(sizeof(chunkInfo));
-        char chunkId[20];
-        char toastOid[20];
-        char blk[20];
-        char toff[20];
-        char suffix[20];
-        if (fscanf(file, "%s\t%s\t%s\t%s\t%s\n",toastOid,chunkId,blk,toff,suffix) != 5) {
+        chunkInfo *elem = pdu_malloc(sizeof(chunkInfo));
+        if (elem == NULL || readChunkInfo(file, elem) != SUCCESS_RET) {
             printf("Error Reading File %s\n",metaToastPath);
-            exit(1);
+            free(elem);
+            fclose(file);
+            harray_free(toastHash);
+            return;
         }
-        elem->toid=atoi(toastOid);
-        elem->chunkid=atoi(chunkId);
-        elem->blk=atoi(blk);
-        elem->toff=atoi(toff);
-        elem->suffix=atoi(suffix);
         harray_append(toastHash,HARRAYTOAST,elem,elem->toid);
     }
 
@@ -3284,14 +3360,46 @@ int initPageOffsforDs(dropContext *dc)
         return FAILURE_RET;
     }
     fseek(idxfp, 0, SEEK_SET);
-    char line[256];
-    while (!feof(idxfp)){
-        dsPageOff *elem = (dsPageOff *)malloc(sizeof(dsPageOff));
+    while (1){
         char a[50]={0};
         char b[50]={0};
-        fscanf(idxfp, "%s\t%s\n", a,b);
-        elem->pageOff = atoll(a);
-        elem->itemOff = atoi(b);
+        PduScanField fields[] = {
+            PDU_SCAN_FIELD(a),
+            PDU_SCAN_FIELD(b)
+        };
+        int fieldCount = pdu_scan_fields(idxfp, fields,
+                                         PDU_SCAN_FIELD_COUNT(fields));
+        int64_t parsedPageOffset;
+        uint32_t parsedItemOffset;
+
+        if (fieldCount == 0) {
+            break;
+        }
+        if (fieldCount != (int) PDU_SCAN_FIELD_COUNT(fields) ||
+            pdu_parse_int64(a, &parsedPageOffset) != 0 ||
+            parsedPageOffset < 0 ||
+            (int64_t) (off_t) parsedPageOffset != parsedPageOffset ||
+            pdu_parse_uint32(b, &parsedItemOffset) != 0) {
+            fprintf(stderr, "Invalid page-offset entry in %s\n", currIdxName);
+            for (size_t i = 0; i < parray_num(idxs); i++) {
+                free(parray_get(idxs, i));
+            }
+            parray_free(idxs);
+            fclose(idxfp);
+            return FAILURE_RET;
+        }
+
+        dsPageOff *elem = (dsPageOff *)pdu_malloc(sizeof(dsPageOff));
+        if (elem == NULL) {
+            for (size_t i = 0; i < parray_num(idxs); i++) {
+                free(parray_get(idxs, i));
+            }
+            parray_free(idxs);
+            fclose(idxfp);
+            return FAILURE_RET;
+        }
+        elem->pageOff = (off_t) parsedPageOffset;
+        elem->itemOff = (uint32) parsedItemOffset;
         parray_append(idxs,elem);
     }
     fclose(idxfp);
@@ -3671,41 +3779,54 @@ void getDropScanOids(TABstruct *taboid,char *flag)
     }
 }
 
-int getDecodeFunctions(const char *typ,decodeFuncs attr2Process[MAX_COL_NUM])
+int buildDecodeFunctionList(const char *types, decodeFuncs *array2Process,
+                            size_t capacity, char *bootType)
 {
-    resetArray2Process(attr2Process);
-    char *attr2DecodeTMP = (char *)malloc((strlen(typ)+1)*sizeof(char));
-    snprintf(attr2DecodeTMP, 10240,  "%s", typ);    int nAttr=0;
-    char *attrChars[MAX_COL_NUM];
-    for (int i = 0; i < MAX_COL_NUM; i++) {
-        attrChars[i] = (char *)malloc(20);
+    char *typesCopy;
+    char *token;
+    size_t count = 0;
+
+    if (types == NULL || array2Process == NULL || capacity == 0 ||
+        bootType == NULL) {
+        return FAILURE_RET;
     }
-    char temp[50];
-    char *token = strtok(attr2DecodeTMP, ",");
+
+    resetArray2Process(array2Process);
+    typesCopy = pdu_strdup(types);
+    if (typesCopy == NULL) {
+        return FAILURE_RET;
+    }
+
+    token = strtok(typesCopy, ",");
     while (token != NULL) {
-        if (nAttr >= 1024) {
-            printf("ExceededattrCharsarray capacity\n");
+        char standardType[100] = {0};
+
+        if (count >= capacity) {
+            fprintf(stderr, "Too many data types (maximum %zu)\n", capacity);
+            free(typesCopy);
+            resetArray2Process(array2Process);
+            return FAILURE_RET;
         }
-        strncpy(temp, token, sizeof(temp) - 1);
-        strcpy(attrChars[nAttr],temp);
-        nAttr++;
+
+        if (getStdTyp(token, standardType, sizeof(standardType)) != SUCCESS_RET ||
+            !AddList2Prcess(array2Process, standardType, bootType)) {
+            free(typesCopy);
+            resetArray2Process(array2Process);
+            return FAILURE_RET;
+        }
+
+        count++;
         token = strtok(NULL, ",");
     }
 
-    int a;
-    for (a=0;a<nAttr;a++){
-        char ret[100];
-        memset(ret,0,100);
-        getStdTyp(attrChars[a],ret);
-        if(!AddList2Prcess(attr2Process,ret,CLASS_BOOTTYPE)){
-            return FAILURE_RET;
-        }
-    }
-    for (int i = 0; i < MAX_COL_NUM; i++) {
-        free(attrChars[i]);
-    }
-
+    free(typesCopy);
     return SUCCESS_RET;
+}
+
+int getDecodeFunctions(const char *typ,decodeFuncs *attr2Process)
+{
+    return buildDecodeFunctionList(typ, attr2Process, MAX_COL_NUM_DROPSCAN,
+                                   CLASS_BOOTTYPE);
 }
 
 systemDropContext* initSystemDropContext(char *flag)
@@ -3931,13 +4052,15 @@ void getAttrAlignAndAttlen(char *attr,char *alignStr,char *attlenStr)
     for (int i = 0; i < nattr; i++)
     {
         char *singleAttr = get_field(',',attr,i+1);
-        char *singleStdAttr = malloc(10);
-        memset(singleStdAttr,0,10);
+        char singleStdAttr[100] = {0};
         if(strcmp(singleAttr,"bpchar") != 0){
-            getStdTyp(singleAttr,singleStdAttr);
+            if (getStdTyp(singleAttr, singleStdAttr, sizeof(singleStdAttr)) != SUCCESS_RET) {
+                free(singleAttr);
+                continue;
+            }
         }
         else{
-            snprintf(singleStdAttr, 10, "%s", singleAttr);        }
+            snprintf(singleStdAttr, sizeof(singleStdAttr), "%s", singleAttr);        }
         int size = sizeof(alignLen_table)/sizeof(alignLen_table[0]);
         int j;
         for ( j=0;j<size;j++ ){
@@ -3948,11 +4071,10 @@ void getAttrAlignAndAttlen(char *attr,char *alignStr,char *attlenStr)
                 }
                 strcat(alignStr,alignLen_table[j].attalign);
                 strcat(attlenStr,alignLen_table[j].attlen);
-                free(singleStdAttr);
-                free(singleAttr);
                 break;
             }
         }
+        free(singleAttr);
     }
 
 }

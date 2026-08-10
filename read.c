@@ -345,8 +345,6 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
                 return FAILURE_RET;
             }
 
-            resetArray2Process(attr2Process);
-
             memset(result,0,MAXPGPATH);
             if (exmode == CSVform) {
                 snprintf(result, 1024, "%s/%s/%s%s", CUR_DB, CUR_SCH, bootFileName, ".csv");
@@ -374,41 +372,10 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
                 dropExist1=0;
                 return FAILURE_RET;
             }
-            size_t attr2Decode_len = strlen(attr2Decode)+1;
-            char *attr2DecodeTMP = (char *)pdu_malloc(attr2Decode_len);
-            if (attr2DecodeTMP == NULL) return FAILURE_RET;
-            snprintf(attr2DecodeTMP, attr2Decode_len, "%s", attr2Decode);
-            int nAttr=0;
-
-            char *attrChars[MAX_COL_NUM];
-
-            for (int i = 0; i < MAX_COL_NUM; i++) {
-                attrChars[i] = (char *)malloc(20);
-            }
-            char temp[50];
-            char *token = strtok(attr2DecodeTMP, ",");
-            while (token != NULL) {
-                if (nAttr >= MAX_COL_NUM) {
-                    printf("Exceeded attrChars array capacity\n");
-                }
-                strncpy(temp, token, sizeof(temp) - 1);
-                strcpy(attrChars[nAttr],temp);
-                nAttr++;
-                token = strtok(NULL, ",");
-            }
-
-            int a;
-            for (a=0;a<nAttr;a++){
-                char ret[100];
-                memset(ret,0,100);
-                getStdTyp(attrChars[a],ret);
-                if(!AddList2Prcess(attr2Process,ret,BOOTTYPE)){
-                    dropExist1=0;
-                    return FAILURE_RET;
-                }
-            }
-            for (int i = 0; i < MAX_COL_NUM; i++) {
-                free(attrChars[i]);
+            if (buildDecodeFunctionList(attr2Decode, attr2Process, MAX_COL_NUM,
+                                        BOOTTYPE) != SUCCESS_RET) {
+                dropExist1=0;
+                return FAILURE_RET;
             }
 
             if(!strcmp(BOOTTYPE,DB_BOOTTYPE)){
@@ -578,7 +545,6 @@ int readItems(TABstruct *taboid,char *filename,char attr2Decode[],char *bootFile
             free(block);
             fclose(bootFile);
             fclose(fp);
-            free(attr2DecodeTMP);
         } else {
             break;
         }
@@ -2382,38 +2348,13 @@ int execGetTx(parray *GetTxRetAll,WALFILE *archDirFiles,WALFILE *walDirFiles,int
         }
     }
 
-    resetArray2Process(attr2Process);
     if(strcmp(typ,"xman") != 0){
-        char *attr2DecodeTMP = (char *)malloc((strlen(typ)+1)*sizeof(char));
-        snprintf(attr2DecodeTMP, 10240,  "%s", typ);        int nAttr=0;
-        char *attrChars[MAX_COL_NUM];
-        for (int i = 0; i < MAX_COL_NUM; i++) {
-            attrChars[i] = (char *)malloc(20);
+        if (buildDecodeFunctionList(typ, attr2Process, MAX_COL_NUM,
+                                    TABLE_BOOTTYPE) != SUCCESS_RET) {
+            return FAILURE_RET;
         }
-        char temp[50];
-        char *token = strtok(attr2DecodeTMP, ",");
-        while (token != NULL) {
-            if (nAttr >= 1024) {
-                printf("ExceededattrCharsarray capacity\n");
-            }
-            strncpy(temp, token, sizeof(temp) - 1);
-            strcpy(attrChars[nAttr],temp);
-            nAttr++;
-            token = strtok(NULL, ",");
-        }
-
-        int a;
-        for (a=0;a<nAttr;a++){
-            char ret[100];
-            memset(ret,0,100);
-            getStdTyp(attrChars[a],ret);
-            if(!AddList2Prcess(attr2Process,ret,TABLE_BOOTTYPE)){
-                return FAILURE_RET;
-            }
-        }
-        for (int i = 0; i < MAX_COL_NUM; i++) {
-            free(attrChars[i]);
-        }
+    } else {
+        resetArray2Process(attr2Process);
     }
 
     if(flag == DELRESTORE && resTyp != UPDATEtyp){
@@ -3282,8 +3223,16 @@ void unloadCOPY(char *schemaname){
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
             if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-                strncpy(filenames[file_count], findFileData.cFileName, MAX_FILENAME_LENGTH - 1);
-                filenames[file_count][MAX_FILENAME_LENGTH - 1] = '\0';
+                if (file_count >= MAX_FILES) {
+                    fprintf(stderr, "Too many files in %s (maximum %d)\n",
+                            csvpath, MAX_FILES);
+                    break;
+                }
+                if (pdu_copy_string(filenames[file_count], MAX_FILENAME_LENGTH,
+                                    findFileData.cFileName) != 0) {
+                    fprintf(stderr, "Skipping oversized filename in %s\n", csvpath);
+                    continue;
+                }
                 file_count++;
             }
         } while (FindNextFile(hFind, &findFileData) != 0);
@@ -3316,10 +3265,20 @@ void unloadCOPY(char *schemaname){
             if (entry1->d_type == 8) {
                 if(strcmp(entry1->d_name,".rec") == 0)
                     continue;
-                strcpy(filenames[file_count],entry1->d_name);
+                if (file_count >= MAX_FILES) {
+                    fprintf(stderr, "Too many files in %s (maximum %d)\n",
+                            csvpath, MAX_FILES);
+                    break;
+                }
+                if (pdu_copy_string(filenames[file_count], MAX_FILENAME_LENGTH,
+                                    entry1->d_name) != 0) {
+                    fprintf(stderr, "Skipping oversized filename in %s\n", csvpath);
+                    continue;
+                }
                 file_count++;
             }
         }
+        closedir(dir1);
     }
 #endif
 
@@ -3410,6 +3369,7 @@ void loadParam()
 {
     FILE *configFile;
     char line[1024];
+    int configError = 0;
     configFile = fopen("pdu.ini", "r");
     if (configFile == NULL) {
         printf("No pdu.ini FOUND\n");
@@ -3420,29 +3380,84 @@ void loadParam()
         line[strcspn(line, "\n")] = '\0';
 
         if (strncmp(line, "PGDATA=", 7) == 0) {
-            sscanf(line + 7, "%s", initDBPath);
+            if (pdu_copy_token(line + 7, initDBPath, sizeof(initDBPath)) != 0) {
+                fprintf(stderr, "Invalid or oversized PGDATA value in pdu.ini\n");
+                configError = 1;
+            }
         }
 
         if (strncmp(line, "ARCHIVE_DEST=", 13) == 0) {
-            sscanf(line + 13, "%s", initArchPath);
+            const char *value = line + 13;
+            while (*value != '\0' && isspace((unsigned char) *value)) {
+                value++;
+            }
+            if (*value == '\0') {
+                initArchPath[0] = '\0';
+            } else if (pdu_copy_token(value, initArchPath,
+                                      sizeof(initArchPath)) != 0) {
+                fprintf(stderr, "Invalid or oversized ARCHIVE_DEST value in pdu.ini\n");
+                configError = 1;
+            }
         }
 
         if (strncmp(line, "DISK_PATH=", 10) == 0) {
-            sscanf(line + 10, "%s", diskPath);
+            const char *value = line + 10;
+            while (*value != '\0' && isspace((unsigned char) *value)) {
+                value++;
+            }
+            if (*value == '\0') {
+                diskPath[0] = '\0';
+            } else if (pdu_copy_token(value, diskPath,
+                                      sizeof(diskPath)) != 0) {
+                fprintf(stderr, "Invalid or oversized DISK_PATH value in pdu.ini\n");
+                configError = 1;
+            }
         }
 
         if (strncmp(line, "BLOCK_INTERVAL=", 15) == 0) {
-            char *val=malloc(10);
-            sscanf(line + 15, "%s", val);
-            blkInterval = atoi(val);
-            if(blkInterval < 1){
+            char value[32] = {0};
+            int parsedInterval;
+
+            if (pdu_copy_token(line + 15, value, sizeof(value)) != 0 ||
+                pdu_parse_int(value, &parsedInterval) != 0 ||
+                parsedInterval < 1) {
                 blkInterval = 5;
+            } else {
+                blkInterval = parsedInterval;
             }
         }
 
         if(strncmp(line,"PGDATA_EXCLUDE=",15) == 0){
-            sscanf(line + 15,"%s",PGDATA_EXCLUDE);
+            const char *value = line + 15;
+            while (*value != '\0' && isspace((unsigned char) *value)) {
+                value++;
+            }
+            if (*value == '\0') {
+                PGDATA_EXCLUDE[0] = '\0';
+            } else if (pdu_copy_token(value, PGDATA_EXCLUDE,
+                                      sizeof(PGDATA_EXCLUDE)) != 0) {
+                fprintf(stderr, "Invalid or oversized PGDATA_EXCLUDE value in pdu.ini\n");
+                configError = 1;
+            }
         }
+    }
+
+    fclose(configFile);
+    if (configError) {
+        exit(1);
+    }
+
+    size_t lenDB = strlen(initDBPath);
+    size_t lenArch = strlen(initArchPath);
+
+    if(lenDB == 0){
+        printf("%sNo PGDATA Found in pdu.ini, Please Check pdu.ini%s\n",COLOR_ERROR,C_RESET);
+        exit(1);
+    }
+
+    if (initDBPath[lenDB - 1] != '/' && lenDB + 1 >= sizeof(initDBPath)) {
+        fprintf(stderr, "PGDATA path is too long to normalize\n");
+        exit(1);
     }
 
     DIR *dir;
@@ -3454,6 +3469,7 @@ void loadParam()
         #endif
         exit(1);
     }
+    closedir(dir);
 
     pgdataExclude = parray_new();
     char *ret  = get_symlink_target(initDBPath);
@@ -3475,22 +3491,12 @@ void loadParam()
             parray_append(pgdataExclude,path_ret);
         }
     }
-    fclose(configFile);
-
-    size_t lenDB = strlen(initDBPath);
-    size_t lenArch = strlen(initArchPath);
-
-    if(lenDB == 0){
-        printf("%sNo PGDATA Found in pdu.ini, Please Check pdu.ini%s\n",COLOR_ERROR,C_RESET);
-        exit(1);
-    }
-
     if (initDBPath[lenDB - 1] != '/') {
         initDBPath[lenDB] = '/';
         initDBPath[lenDB + 1] = '\0';
     }
 
-    if (initArchPath[lenArch - 1] == '/') {
+    if (lenArch > 0 && initArchPath[lenArch - 1] == '/') {
         initArchPath[lenArch-1] = '\0';
     }
 
@@ -3694,21 +3700,15 @@ int initToastHash(char *CUR_DB,char *toastnode)
 
     int i;
     for (i = 0; i < numLines; i++) {
-        chunkInfo *elem = malloc(sizeof(chunkInfo));
-        char chunkId[20];
-        char toastOid[20];
-        char blk[20];
-        char toff[20];
-        char suffix[20];
-        if (fscanf(file, "%s\t%s\t%s\t%s\t%s\n",toastOid,chunkId,blk,toff,suffix) != 5) {
+        chunkInfo *elem = pdu_malloc(sizeof(chunkInfo));
+        if (elem == NULL || readChunkInfo(file, elem) != SUCCESS_RET) {
             printf("Error Reading File %s\n",metaToastPath);
-            exit(1);
+            free(elem);
+            fclose(file);
+            harray_free(toastHash);
+            toastHash = NULL;
+            return FAILURE_RET;
         }
-        elem->toid=atoi(toastOid);
-        elem->chunkid=atoi(chunkId);
-        elem->blk=atoi(blk);
-        elem->toff=atoi(toff);
-        elem->suffix=atoi(suffix);
         harray_append(toastHash,HARRAYTOAST,elem,elem->toid);
     }
 
@@ -3772,8 +3772,10 @@ void META(char *type,char *objname){
         warningUseDBFirst();
         return;
     }
-    if (fclose(fopen("restore/tab.config", "w")) == EOF) perror("Error clearing file");
-    FILE *fp = fopen("restore/tab.config","a");
+    FILE *fp = pdu_fopen("restore/tab.config", "w");
+    if (fp == NULL) {
+        return;
+    }
     int cnt = 0;
     int matched = 0;
     if(strcmp(type,"sch") == 0){
@@ -3795,8 +3797,15 @@ void META(char *type,char *objname){
                 for (int j = 0; j < tabSize; j++)
                 {
                     TABstruct elem = taboid[j];
-                    char *str = (char*)malloc(20+strlen(elem.tab)+strlen(elem.typ));
-                    snprintf(str, 20, "%s %s\n",elem.tab,elem.typ);                    fputs(str,fp);
+                    size_t strSize = strlen(elem.tab) + strlen(elem.typ) + 3;
+                    char *str = (char*)pdu_malloc(strSize);
+                    if (str == NULL) {
+                        fclose(fp);
+                        return;
+                    }
+                    snprintf(str, strSize, "%s %s\n",elem.tab,elem.typ);
+                    fputs(str,fp);
+                    free(str);
                 }
                 snprintf(CUR_SCH, 100,  "%s", sch2copy);            }
         }
@@ -3812,13 +3821,22 @@ void META(char *type,char *objname){
             {
                 TABstruct elem = taboid[j];
                 if(strcmp(elem.tab,tab) == 0){
-                    char *str = (char*)malloc(20+strlen(elem.tab)+strlen(elem.typ));
-                    snprintf(str, 20, "%s %s",elem.tab,elem.typ);                    printf("%s%s%s\n",COLOR_UNLOAD,str,C_RESET);
+                    size_t strSize = strlen(elem.tab) + strlen(elem.typ) + 3;
+                    char *str = (char*)pdu_malloc(strSize);
+                    if (str == NULL) {
+                        free(tab);
+                        fclose(fp);
+                        return;
+                    }
+                    snprintf(str, strSize, "%s %s\n",elem.tab,elem.typ);
+                    printf("%s%s%s",COLOR_UNLOAD,str,C_RESET);
                     fputs(str,fp);
+                    free(str);
                     matched = 1;
                     break;
                 }
             }
+            free(tab);
         }
         cnt = commaCnt+1;
     }

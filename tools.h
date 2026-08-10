@@ -688,7 +688,12 @@ int getLineNum(char *filename);
 
 void trimLastValue(const char* str1, char* str2);
 
-void getStdTyp(char *str,char *ret);
+int getStdTyp(const char *str, char *ret, size_t ret_size);
+
+int buildDecodeFunctionList(const char *types, decodeFuncs *array2Process,
+                            size_t capacity, char *bootType);
+
+int readChunkInfo(FILE *file, chunkInfo *result);
 
 int createDir(char *dirname);
 
