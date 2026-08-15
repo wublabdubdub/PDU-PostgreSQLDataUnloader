@@ -292,6 +292,7 @@ All interactive commands must end with `;`.
 | **Corrupted Database** | Entire database broken—reconstruct catalog and data | [Open Guide →](https://pduzc.com/docs/instant-recovery/corrupted-database) |
 | **Deleted Records** | Rows accidentally deleted—replay WAL to recover | [Open Guide →](https://pduzc.com/docs/instant-recovery/deleted-records) |
 | **Updated Records** | Wrong UPDATE executed—rollback with WAL analysis | [Open Guide →](https://pduzc.com/docs/instant-recovery/updated-records) |
+| **No Backup: DELETE / DROP TABLE / DROP DATABASE** | Compare PITR, pg_dirtyread, pg_filedump, PDU, and professional recovery | [Decision Guide →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
 
@@ -439,6 +440,7 @@ Copyright © 2024-2025
 - **📚 Full Documentation**: [pduzc.com/docs](https://pduzc.com/docs)
 - **⚡ Features Overview**: [pduzc.com/features](https://pduzc.com/features)
 - **🚀 Quick Start Guide**: [pduzc.com/quickstart](https://pduzc.com/quickstart)
+- **🧭 No-Backup Recovery Decision Guide**: [DELETE / DROP TABLE / DROP DATABASE](https://pduzc.com/postgresql-recovery-without-backup)
 - **💬 GitHub Issues**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub Repository**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
@@ -758,6 +760,7 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 | **数据库损坏** | 整个数据库损坏——重建目录和数据 | [打开指南 →](https://pduzc.com/docs/instant-recovery/corrupted-database) |
 | **记录被删除** | 行被误删——重放 WAL 以恢复 | [打开指南 →](https://pduzc.com/docs/instant-recovery/deleted-records) |
 | **记录被更新** | 执行了错误的 UPDATE——用 WAL 分析回滚 | [打开指南 →](https://pduzc.com/docs/instant-recovery/updated-records) |
+| **无备份：DELETE / DROP TABLE / DROP DATABASE** | 对比 PITR、pg_dirtyread、pg_filedump、PDU 与专业恢复服务 | [查看决策指南 →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
 
@@ -905,6 +908,7 @@ sudo yum install gcc lz4-devel zlib-devel
 - **📚 完整文档**：[pduzc.com/docs](https://pduzc.com/docs)
 - **⚡ 功能概览**：[pduzc.com/features](https://pduzc.com/features)
 - **🚀 快速开始指南**：[pduzc.com/quickstart](https://pduzc.com/quickstart)
+- **🧭 无备份恢复决策指南**：[DELETE / DROP TABLE / DROP DATABASE](https://pduzc.com/postgresql-recovery-without-backup)
 - **💬 GitHub Issues**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub 仓库**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
