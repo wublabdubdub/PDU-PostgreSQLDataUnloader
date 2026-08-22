@@ -183,27 +183,36 @@ static inline int pdu_scan_fields(FILE *file, PduScanField *fields,
     return (int) field_count;
 }
 
+/*
+ * Count non-empty records while accepting LF, CRLF, and CR line endings.
+ * Whitespace-only lines and the legacy trailing CR metadata sentinel do not
+ * represent records and are intentionally ignored.
+ */
 static inline int pdu_count_file_lines(FILE *file, int *line_count)
 {
     size_t count = 0;
     int ch;
-    int last = EOF;
+    int line_has_content = 0;
 
     if (file == NULL || line_count == NULL) {
         return -1;
     }
 
     while ((ch = fgetc(file)) != EOF) {
-        if (ch == '\n') {
-            count++;
+        if (ch == '\n' || ch == '\r') {
+            if (line_has_content) {
+                count++;
+                line_has_content = 0;
+            }
+        } else if (!isspace((unsigned char) ch)) {
+            line_has_content = 1;
         }
-        last = ch;
     }
 
     if (ferror(file)) {
         return -1;
     }
-    if (last != EOF && last != '\n') {
+    if (line_has_content) {
         count++;
     }
     if (count > INT_MAX) {

@@ -162,15 +162,15 @@ int getLineNum(char *filename)
 {
     FILE *file = fopen(filename, "r");
     int numLines = 0;
-    char ch;
-    while ((ch = fgetc(file)) != EndOfFile) {
-        if (ch == '\n') {
-            numLines++;
-        }
-        if (ch == '\r'){
-            break;
-        }
+
+    if (file == NULL) {
+        return 0;
     }
+    if (pdu_count_file_lines(file, &numLines) != 0) {
+        numLines = 0;
+    }
+
+    fclose(file);
     return numLines;
 }
 

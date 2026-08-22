@@ -1028,7 +1028,6 @@ void bootforDropScan(char *CUR_DB)
         }
         free(tmpstr);
     }
-    fputs("\r", fp);
     fclose(fp);
     free(taboidDrop);
 }
@@ -1563,7 +1562,6 @@ void flushFinalCLass(TABstruct *taboid,int tabsize){
         }
         free(tmpstr);
     }
-    fputs("\r", fp);
     fclose(fp);
 
     int tabSizeOuput=getLineNum(filename);
