@@ -39,7 +39,7 @@
 
 #include "pdu_safe.h"
 
-#define PG_VERSION_NUM 14
+#define PG_VERSION_NUM 18
 
 #define EN
 
