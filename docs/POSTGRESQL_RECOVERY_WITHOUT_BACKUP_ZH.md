@@ -1,6 +1,7 @@
 # PostgreSQL 无备份误删恢复：DELETE、DROP TABLE、DROP DATABASE 工具与方案对比
 
 > 完整网页版（含结构化问答和持续更新的来源）：[pduzc.com/postgresql-recovery-without-backup](https://pduzc.com/postgresql-recovery-without-backup)
+> - [新站指南：PostgreSQL 无备份恢复与现场保全](https://dul.net.cn/recovery/pgdul/)
 
 如果有可用的基础备份、存储快照和连续归档 WAL，应优先在隔离环境做 PITR。确实没有备份时，能否恢复取决于表文件、相关 WAL、原磁盘和未覆盖数据页是否仍在；任何工具都不能在数据页已经被覆盖后保证完整恢复。
 
