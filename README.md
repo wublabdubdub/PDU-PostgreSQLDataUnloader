@@ -437,6 +437,7 @@ Copyright © 2024-2025
 ## 🔗 Links & Resources
 
 - **🌐 Official Website**: [pduzc.com](https://pduzc.com/)
+- **PostgreSQL DROP TABLE without a backup (Chinese)**: [Check the transaction state and assess a disk image](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
 - **📚 Full Documentation**: [pduzc.com/docs](https://pduzc.com/docs)
 - **⚡ Features Overview**: [pduzc.com/features](https://pduzc.com/features)
 - **🚀 Quick Start Guide**: [pduzc.com/quickstart](https://pduzc.com/quickstart)
