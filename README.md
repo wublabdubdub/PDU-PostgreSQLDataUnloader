@@ -439,6 +439,7 @@ Copyright © 2024-2025
 - **🌐 Official Website**: [dul.net.cn](https://dul.net.cn/postgresql/)
 - **PostgreSQL DROP TABLE without a backup (Chinese)**: [Check the transaction state and assess a disk image](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
 - [PostgreSQL TRUNCATE recovery guide (Chinese)](https://dul.net.cn/postgresql-truncate-recovery/)
+- [PostgreSQL missing historical rows without a backup (Chinese)](https://dul.net.cn/postgresql-missing-rows/)
 - **📚 Full Documentation**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
 - **⚡ Features Overview**: [dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 Quick Start Guide**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
@@ -908,6 +909,7 @@ sudo yum install gcc lz4-devel zlib-devel
 
 - **🌐 官方网站**：[dul.net.cn](https://dul.net.cn/postgresql/)
 - [PostgreSQL TRUNCATE 已提交后的恢复指南](https://dul.net.cn/postgresql-truncate-recovery/)
+- [PostgreSQL 历史记录查不到时的排查与恢复](https://dul.net.cn/postgresql-missing-rows/)
 - **📚 完整文档**：[dul.net.cn/docs/](https://dul.net.cn/docs/)
 - **⚡ 功能概览**：[dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 快速开始指南**：[dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
