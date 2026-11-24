@@ -5,14 +5,14 @@
 
 ### All PostgreSQL Data Recovery Scenarios, One Tool
 
-[![Website](https://img.shields.io/badge/🌐_Website-pduzc.com-4A90E2?style=flat)](https://pduzc.com/)
-[![Features](https://img.shields.io/badge/⚡_Features-Overview-F39C12?style=flat)](https://pduzc.com/features)
-[![Documentation](https://img.shields.io/badge/📚_Docs-Instant_Recovery-9B59B6?style=flat)](https://pduzc.com/docs/instant-recovery)
-[![Quick Start](https://img.shields.io/badge/🚀_Quick-Start-E74C3C?style=flat)](https://pduzc.com/quickstart)
+[![Website](https://img.shields.io/badge/🌐_Website-dul.net.cn-4A90E2?style=flat)](https://dul.net.cn/postgresql/)
+[![Features](https://img.shields.io/badge/⚡_Features-Overview-F39C12?style=flat)](https://dul.net.cn/postgresql/)
+[![Documentation](https://img.shields.io/badge/📚_Docs-Instant_Recovery-9B59B6?style=flat)](https://dul.net.cn/recovery/pgdul/)
+[![Quick Start](https://img.shields.io/badge/🚀_Quick-Start-E74C3C?style=flat)](https://dul.net.cn/quickstart/)
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-27AE60?style=flat)](LICENSE)
-[![Professional](https://img.shields.io/badge/Professional-Grade-34495E?style=flat)](https://pduzc.com/)
-[![Easy to Use](https://img.shields.io/badge/Easy_to-Use-1ABC9C?style=flat)](https://pduzc.com/quickstart)
+[![Professional](https://img.shields.io/badge/Professional-Grade-34495E?style=flat)](https://dul.net.cn/postgresql/)
+[![Easy to Use](https://img.shields.io/badge/Easy_to-Use-1ABC9C?style=flat)](https://dul.net.cn/quickstart/)
 [![Platform](https://img.shields.io/badge/platform-Linux_x86__64-E67E22?style=flat&logo=linux&logoColor=white)](https://www.kernel.org/)
 
 [English](#english) | [中文](#中文)
@@ -76,9 +76,9 @@ PDU handles **three critical disaster scenarios** with **two recovery methods**:
 
 | Scenario | What Happened | PDU Solution | Guide |
 |----------|---------------|--------------|-------|
-| ▸ **Database Corruption** | PostgreSQL won't start due to catalog/file corruption | Extract data directly from damaged files | [Read →](https://pduzc.com/docs/instant-recovery/corrupted-instance) |
-| ▸ **Accidental DELETE/UPDATE** | Wrong `DELETE`/`UPDATE` executed in production | Replay WAL archives to recover original data | [Read →](https://pduzc.com/docs/instant-recovery/deleted-records) |
-| ▸ **Data File Loss** | Specific data files deleted or corrupted | Rebuild data from remaining files | [Read →](https://pduzc.com/docs/instant-recovery/corrupted-datafile) |
+| ▸ **Database Corruption** | PostgreSQL won't start due to catalog/file corruption | Extract data directly from damaged files | [Read →](https://dul.net.cn/postgresql-offline-export/) |
+| ▸ **Accidental DELETE/UPDATE** | Wrong `DELETE`/`UPDATE` executed in production | Replay WAL archives to recover original data | [Read →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| ▸ **Data File Loss** | Specific data files deleted or corrupted | Rebuild data from remaining files | [Read →](https://dul.net.cn/postgresql-data-file-deleted/) |
 
 ### 🛠️ Two Recovery Methods
 
@@ -134,7 +134,7 @@ PDU> \d+ customers;        -- Describe table structure
 PDU> unload tab customers; -- Export one table to CSV
 ```
 
-📖 **Full Guide**: [pduzc.com/quickstart](https://pduzc.com/quickstart)
+📖 **Full Guide**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
 
 ---
 
@@ -195,7 +195,7 @@ PDU> restore upd <TxID>;         -- Restore pre-UPDATE values
 
 **Result**: Original values before `UPDATE` statement recovered from WAL.
 
-📖 **More Scenarios**: [pduzc.com/docs/instant-recovery](https://pduzc.com/docs/instant-recovery)
+📖 **More Scenarios**: [dul.net.cn/recovery/pgdul/](https://dul.net.cn/recovery/pgdul/)
 
 ---
 
@@ -247,7 +247,7 @@ PDU> restore upd <TxID>;         -- Restore pre-UPDATE values
 
 All interactive commands must end with `;`.
 
-📖 **Full Reference**: [pduzc.com/docs](https://pduzc.com/docs)
+📖 **Full Reference**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
 
 ---
 
@@ -283,15 +283,15 @@ All interactive commands must end with `;`.
 
 ## 🏆 Recovery Workflows
 
-> 📚 **Comprehensive guides available at [pduzc.com/docs/instant-recovery](https://pduzc.com/docs/instant-recovery)**
+> 📚 **Comprehensive guides available at [dul.net.cn/recovery/pgdul/](https://dul.net.cn/recovery/pgdul/)**
 
 | Scenario | Description | Official Guide |
 |----------|-------------|----------------|
-| **Corrupted Instance** | PostgreSQL won't start—extract data straight from disk | [Open Guide →](https://pduzc.com/docs/instant-recovery/corrupted-instance) |
-| **Corrupted Datafile** | Specific datafile damaged—salvage reachable data | [Open Guide →](https://pduzc.com/docs/instant-recovery/corrupted-datafile) |
-| **Corrupted Database** | Entire database broken—reconstruct catalog and data | [Open Guide →](https://pduzc.com/docs/instant-recovery/corrupted-database) |
-| **Deleted Records** | Rows accidentally deleted—replay WAL to recover | [Open Guide →](https://pduzc.com/docs/instant-recovery/deleted-records) |
-| **Updated Records** | Wrong UPDATE executed—rollback with WAL analysis | [Open Guide →](https://pduzc.com/docs/instant-recovery/updated-records) |
+| **Corrupted Instance** | PostgreSQL won't start—extract data straight from disk | [Open Guide →](https://dul.net.cn/postgresql-offline-export/) |
+| **Corrupted Datafile** | Specific datafile damaged—salvage reachable data | [Open Guide →](https://dul.net.cn/postgresql-offline-export/#inspect) |
+| **Corrupted Database** | Entire database broken—reconstruct catalog and data | [Open Guide →](https://dul.net.cn/postgresql-offline-export/) |
+| **Deleted Records** | Rows accidentally deleted—replay WAL to recover | [Open Guide →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| **Updated Records** | Wrong UPDATE executed—rollback with WAL analysis | [Open Guide →](https://dul.net.cn/recovery/pgdul/#section-2) |
 | **No Backup: DELETE / DROP TABLE / DROP DATABASE** | Compare PITR, pg_dirtyread, pg_filedump, PDU, and professional recovery | [Decision Guide →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
@@ -436,12 +436,13 @@ Copyright © 2024-2025
 
 ## 🔗 Links & Resources
 
-- **🌐 Official Website**: [pduzc.com](https://pduzc.com/)
+- **🌐 Official Website**: [dul.net.cn](https://dul.net.cn/postgresql/)
 - **PostgreSQL DROP TABLE without a backup (Chinese)**: [Check the transaction state and assess a disk image](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
-- **📚 Full Documentation**: [pduzc.com/docs](https://pduzc.com/docs)
-- **⚡ Features Overview**: [pduzc.com/features](https://pduzc.com/features)
-- **🚀 Quick Start Guide**: [pduzc.com/quickstart](https://pduzc.com/quickstart)
-- **🧭 No-Backup Recovery Decision Guide**: [DELETE / DROP TABLE / DROP DATABASE](https://pduzc.com/postgresql-recovery-without-backup)
+- [PostgreSQL TRUNCATE recovery guide (Chinese)](https://dul.net.cn/postgresql-truncate-recovery/)
+- **📚 Full Documentation**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
+- **⚡ Features Overview**: [dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
+- **🚀 Quick Start Guide**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
+- **🧭 No-Backup Recovery Decision Guide**: [DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
 - **💬 GitHub Issues**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub Repository**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
@@ -462,7 +463,7 @@ If PDU helped you recover critical data or saved your day, please consider:
 
 ### 💬 Questions or Feedback?
 
-Visit [pduzc.com](https://pduzc.com/) for comprehensive guides, or [open an issue](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues) on GitHub.
+Visit [dul.net.cn](https://dul.net.cn/postgresql/) for comprehensive guides, or [open an issue](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues) on GitHub.
 
 **Made with ❤️ for the PostgreSQL Community**
 
@@ -479,14 +480,14 @@ Visit [pduzc.com](https://pduzc.com/) for comprehensive guides, or [open an issu
 
 ### 所有 PostgreSQL 数据恢复场景，一个工具搞定
 
-[![官网](https://img.shields.io/badge/🌐_官网-pduzc.com-4A90E2?style=flat)](https://pduzc.com/)
-[![功能特性](https://img.shields.io/badge/⚡_功能-特性概览-F39C12?style=flat)](https://pduzc.com/features)
-[![文档](https://img.shields.io/badge/📚_文档-即时恢复-9B59B6?style=flat)](https://pduzc.com/docs/instant-recovery)
-[![快速开始](https://img.shields.io/badge/🚀_快速-开始-E74C3C?style=flat)](https://pduzc.com/quickstart)
+[![官网](https://img.shields.io/badge/🌐_官网-dul.net.cn-4A90E2?style=flat)](https://dul.net.cn/postgresql/)
+[![功能特性](https://img.shields.io/badge/⚡_功能-特性概览-F39C12?style=flat)](https://dul.net.cn/postgresql/)
+[![文档](https://img.shields.io/badge/📚_文档-即时恢复-9B59B6?style=flat)](https://dul.net.cn/recovery/pgdul/)
+[![快速开始](https://img.shields.io/badge/🚀_快速-开始-E74C3C?style=flat)](https://dul.net.cn/quickstart/)
 
 [![许可证](https://img.shields.io/badge/许可证-Apache--2.0-27AE60?style=flat)](LICENSE)
-[![专业级](https://img.shields.io/badge/专业-级别-34495E?style=flat)](https://pduzc.com/)
-[![易上手](https://img.shields.io/badge/易于-上手-1ABC9C?style=flat)](https://pduzc.com/quickstart)
+[![专业级](https://img.shields.io/badge/专业-级别-34495E?style=flat)](https://dul.net.cn/postgresql/)
+[![易上手](https://img.shields.io/badge/易于-上手-1ABC9C?style=flat)](https://dul.net.cn/quickstart/)
 [![平台](https://img.shields.io/badge/平台-Linux_x86__64-E67E22?style=flat&logo=linux&logoColor=white)](https://www.kernel.org/)
 
 </div>
@@ -546,9 +547,9 @@ PDU 使用**两种恢复方法**处理**三种关键灾难场景**：
 
 | 场景 | 发生了什么 | PDU 解决方案 | 指南 |
 |------|-----------|--------------|------|
-| ▸ **数据库损坏** | PostgreSQL 因目录/文件损坏无法启动 | 直接从损坏文件中提取数据 | [查看 →](https://pduzc.com/docs/instant-recovery/corrupted-instance) |
-| ▸ **误执行 DELETE/UPDATE** | 在生产环境执行了错误的 `DELETE`/`UPDATE` | 重放 WAL 归档以恢复原始数据 | [查看 →](https://pduzc.com/docs/instant-recovery/deleted-records) |
-| ▸ **数据文件丢失** | 特定数据文件被删除或损坏 | 从剩余文件重建数据 | [查看 →](https://pduzc.com/docs/instant-recovery/corrupted-datafile) |
+| ▸ **数据库损坏** | PostgreSQL 因目录/文件损坏无法启动 | 直接从损坏文件中提取数据 | [查看 →](https://dul.net.cn/postgresql-offline-export/) |
+| ▸ **误执行 DELETE/UPDATE** | 在生产环境执行了错误的 `DELETE`/`UPDATE` | 重放 WAL 归档以恢复原始数据 | [查看 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| ▸ **数据文件丢失** | 特定数据文件被删除或损坏 | 从剩余文件重建数据 | [查看 →](https://dul.net.cn/postgresql-data-file-deleted/) |
 
 ### 🛠️ 两种恢复方法
 
@@ -604,7 +605,7 @@ PDU> \d+ customers;        -- 查看表结构
 PDU> unload tab customers; -- 导出单表为 CSV
 ```
 
-📖 **完整指南**: [pduzc.com/quickstart](https://pduzc.com/quickstart)
+📖 **完整指南**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
 
 ---
 
@@ -665,7 +666,7 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 
 **结果**：从 WAL 恢复 `UPDATE` 语句执行前的原始值。
 
-📖 **更多场景**: [pduzc.com/docs/instant-recovery](https://pduzc.com/docs/instant-recovery)
+📖 **更多场景**: [dul.net.cn/recovery/pgdul/](https://dul.net.cn/recovery/pgdul/)
 
 ---
 
@@ -717,7 +718,7 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 
 所有交互式命令都必须以 `;` 结尾。
 
-📖 **完整参考**: [pduzc.com/docs](https://pduzc.com/docs)
+📖 **完整参考**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
 
 ---
 
@@ -752,15 +753,15 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 
 ## 🏆 恢复工作流程
 
-> 📚 **完整指南请访问 [pduzc.com/docs/instant-recovery](https://pduzc.com/docs/instant-recovery)**
+> 📚 **完整指南请访问 [dul.net.cn/recovery/pgdul/](https://dul.net.cn/recovery/pgdul/)**
 
 | 场景 | 说明 | 官方指南 |
 |------|------|----------|
-| **实例损坏** | PostgreSQL 无法启动——直接从磁盘提取数据 | [打开指南 →](https://pduzc.com/docs/instant-recovery/corrupted-instance) |
-| **数据文件损坏** | 特定数据文件损坏——抢救可访问的数据 | [打开指南 →](https://pduzc.com/docs/instant-recovery/corrupted-datafile) |
-| **数据库损坏** | 整个数据库损坏——重建目录和数据 | [打开指南 →](https://pduzc.com/docs/instant-recovery/corrupted-database) |
-| **记录被删除** | 行被误删——重放 WAL 以恢复 | [打开指南 →](https://pduzc.com/docs/instant-recovery/deleted-records) |
-| **记录被更新** | 执行了错误的 UPDATE——用 WAL 分析回滚 | [打开指南 →](https://pduzc.com/docs/instant-recovery/updated-records) |
+| **实例损坏** | PostgreSQL 无法启动——直接从磁盘提取数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
+| **数据文件损坏** | 特定数据文件损坏——抢救可访问的数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/#inspect) |
+| **数据库损坏** | 整个数据库损坏——重建目录和数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
+| **记录被删除** | 行被误删——重放 WAL 以恢复 | [打开指南 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| **记录被更新** | 执行了错误的 UPDATE——用 WAL 分析回滚 | [打开指南 →](https://dul.net.cn/recovery/pgdul/#section-2) |
 | **无备份：DELETE / DROP TABLE / DROP DATABASE** | 对比 PITR、pg_dirtyread、pg_filedump、PDU 与专业恢复服务 | [查看决策指南 →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
@@ -905,11 +906,12 @@ sudo yum install gcc lz4-devel zlib-devel
 
 ## 🔗 链接与资源
 
-- **🌐 官方网站**：[pduzc.com](https://pduzc.com/)
-- **📚 完整文档**：[pduzc.com/docs](https://pduzc.com/docs)
-- **⚡ 功能概览**：[pduzc.com/features](https://pduzc.com/features)
-- **🚀 快速开始指南**：[pduzc.com/quickstart](https://pduzc.com/quickstart)
-- **🧭 无备份恢复决策指南**：[DELETE / DROP TABLE / DROP DATABASE](https://pduzc.com/postgresql-recovery-without-backup)
+- **🌐 官方网站**：[dul.net.cn](https://dul.net.cn/postgresql/)
+- [PostgreSQL TRUNCATE 已提交后的恢复指南](https://dul.net.cn/postgresql-truncate-recovery/)
+- **📚 完整文档**：[dul.net.cn/docs/](https://dul.net.cn/docs/)
+- **⚡ 功能概览**：[dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
+- **🚀 快速开始指南**：[dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
+- **🧭 无备份恢复决策指南**：[DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
 - **💬 GitHub Issues**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub 仓库**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
@@ -930,7 +932,7 @@ sudo yum install gcc lz4-devel zlib-devel
 
 ### 💬 有问题或反馈？
 
-访问 [pduzc.com](https://pduzc.com/) 获取全面指南，或在 GitHub 上[提交问题](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)。
+访问 [dul.net.cn](https://dul.net.cn/postgresql/) 获取全面指南，或在 GitHub 上[提交问题](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)。
 
 **用 ❤️ 为 PostgreSQL 社区打造**
 
