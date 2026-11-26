@@ -48,6 +48,8 @@
 - 不适用：`DROP TABLE` 后关系文件已经被移除，或死元组已被 `VACUUM`/页面复用。
 - 来源：[df7cb/pg_dirtyread](https://github.com/df7cb/pg_dirtyread)
 
+如果您正在比较另一款扩展 `pg_recovery`，可以查看它支持的 PostgreSQL 版本、读取旧记录的条件，以及表里的旧记录被清理后可以检查的 WAL。 [DUL 官网的 pg_recovery 与 PDU 使用条件](https://dul.net.cn/postgresql-pg-recovery-deleted-rows/)
+
 ### pg_filedump
 
 - 适用：检查仍存在的 PostgreSQL 数据文件，查看页面、行指针和元组内容。
