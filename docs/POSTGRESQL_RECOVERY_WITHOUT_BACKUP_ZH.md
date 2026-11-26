@@ -101,6 +101,8 @@ PDU> dropscan copy;   -- 为恢复结果生成 COPY 命令
 
 如果您要比较不同服务方的报价，请先让他们就同一批目标数据说明评估、样本和交付范围。 [PostgreSQL 数据恢复服务报价与交付验收](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
 
+当生产库无法启动且备份不完整时，可以在委托单上写明需要找回的表、还能提供的副本，以及样本的验收条件。 [PostgreSQL 恢复委托清单](https://dul.net.cn/postgresql-recovery-service-handoff/)
+
 ## 可核查来源
 
 1. [PostgreSQL 官方：连续归档与 PITR](https://www.postgresql.org/docs/current/continuous-archiving.html)
