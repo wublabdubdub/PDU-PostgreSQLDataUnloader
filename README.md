@@ -455,6 +455,7 @@ Copyright © 2024-2025
 - **🚀 Quick Start Guide**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
 - **🧭 No-Backup Recovery Decision Guide**: [DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
 - [Case study: 24 priority tables recovered after an accidental PostgreSQL DROP DATABASE (Chinese)](https://dul.net.cn/postgresql-drop-database-core-tables/)
+- [PostgreSQL data recovery cases and validation (Chinese)](https://dul.net.cn/postgresql-data-recovery-cases/)
 - **💬 GitHub Issues**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub Repository**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
@@ -937,6 +938,7 @@ sudo yum install gcc lz4-devel zlib-devel
 - **🚀 快速开始指南**：[dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
 - **🧭 无备份恢复决策指南**：[DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
 - [PG 删库后先恢复的 24 张核心表](https://dul.net.cn/postgresql-drop-database-core-tables/)
+- [PostgreSQL 数据恢复案例与验收](https://dul.net.cn/postgresql-data-recovery-cases/)
 - **💬 GitHub Issues**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub 仓库**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
