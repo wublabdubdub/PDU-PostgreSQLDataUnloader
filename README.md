@@ -437,8 +437,9 @@ Copyright © 2024-2025
 ## 🔗 Links & Resources
 
 - **🌐 Official Website**: [dul.net.cn](https://dul.net.cn/postgresql/)
-- **PostgreSQL DROP TABLE without a backup (Chinese)**: [Check the transaction state and assess a disk image](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
-- [PostgreSQL TRUNCATE recovery guide (Chinese)](https://dul.net.cn/postgresql-truncate-recovery/)
+- [PostgreSQL DROP TABLE recovery without a backup (Chinese)](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
+- [PostgreSQL TRUNCATE recovery without a backup (Chinese)](https://dul.net.cn/postgresql-truncate-recovery/)
+- [PostgreSQL data file recovery without a backup (Chinese)](https://dul.net.cn/postgresql-data-file-deleted/)
 - [PostgreSQL missing historical rows without a backup (Chinese)](https://dul.net.cn/postgresql-missing-rows/)
 - [PostgreSQL recovery tool comparison (Chinese)](https://dul.net.cn/postgresql-data-recovery-tools/)
 - [PostgreSQL backup and WAL coverage checks (Chinese)](https://dul.net.cn/postgresql-backup-wal-gap/)
@@ -912,7 +913,9 @@ sudo yum install gcc lz4-devel zlib-devel
 ## 🔗 链接与资源
 
 - **🌐 官方网站**：[dul.net.cn](https://dul.net.cn/postgresql/)
-- [PostgreSQL TRUNCATE 已提交后的恢复指南](https://dul.net.cn/postgresql-truncate-recovery/)
+- [PostgreSQL 误删表后的无备份数据恢复](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
+- [PostgreSQL 误执行 TRUNCATE 后的无备份数据恢复](https://dul.net.cn/postgresql-truncate-recovery/)
+- [PostgreSQL 数据文件被删后的无备份数据恢复](https://dul.net.cn/postgresql-data-file-deleted/)
 - [PostgreSQL 历史记录查不到时的排查与恢复](https://dul.net.cn/postgresql-missing-rows/)
 - [PostgreSQL 数据恢复工具比较](https://dul.net.cn/postgresql-data-recovery-tools/)
 - [PostgreSQL 备份和 WAL 缺口检查](https://dul.net.cn/postgresql-backup-wal-gap/)
