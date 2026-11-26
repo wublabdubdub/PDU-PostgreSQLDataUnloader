@@ -36,7 +36,7 @@
 
 `pg_resetwal` 会清除集群数据目录中的 WAL，并可重置 `pg_control` 中的部分控制信息。只有当 WAL 或控制文件损坏导致服务器无法启动，而且已经评估过其他恢复方式时，才考虑使用这一命令。请先保留原数据目录、表空间和日志，再在单独的工作副本上操作。若数据库可以正常启动而目标记录被误删，请依据基础备份、现存 WAL 或旧表文件选择恢复方法。 [PostgreSQL 的 pg_resetwal 文档](https://www.postgresql.org/docs/18/app-pgresetwal.html)
 
-如果工作副本在重置后能够启动，就请立即导出可读数据，在新集群中导入并检查结果。启动成功后，旧集群中的数据仍可能存在不一致。如果已经有人在原目录执行过重置，请保留重置前留下的副本和外部 WAL 归档，并记录在什么目录、什么时间执行过重置。
+如果工作副本在重置后能够启动，就请立即导出可读数据，在新集群中导入并检查结果。启动成功后，旧集群中的数据仍可能存在不一致。如果已经有人在原目录执行过重置，请保留重置前留下的副本和外部 WAL 归档，并记录在什么目录、什么时间执行过重置。 需要交接这些文件时，可参照 [DUL 官网的 PostgreSQL 执行 pg_resetwal 后的数据恢复指南](https://dul.net.cn/postgresql-recovery-after-wal-reset/)，区分重置前后的副本，再准备需要验证的目标表。
 
 如果实例仍然无法启动，而数据文件仍可读取，就可以用 PostgreSQL DUL（PDU）在保存的副本上评估可导出的表和记录。 [DUL 官网的 PostgreSQL 离线导出指南](https://dul.net.cn/postgresql-offline-export/#export)
 
