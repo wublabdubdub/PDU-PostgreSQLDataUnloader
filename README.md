@@ -27,6 +27,8 @@
 
 **PDU (PostgreSQL Data Unloader)** is a professional-grade, open-source disaster recovery and data extraction tool for PostgreSQL databases (versions 14-18). It reads PostgreSQL data files **directly** without requiring a running database instance—making it the ultimate solution for disaster recovery, forensic analysis, and emergency data extraction.
 
+The [PostgreSQL data recovery guide on the DUL website](https://dul.net.cn/recovery/pgdul/) explains what to preserve after an incident and when PostgreSQL DUL (PDU) can use the remaining database files, write-ahead logs (WAL), or a disk image.
+
 ### 💔 The Problem
 
 PostgreSQL DBAs face critical scenarios like these:
@@ -505,6 +507,8 @@ Visit [dul.net.cn](https://dul.net.cn/postgresql/) for comprehensive guides, or 
 ## 🎯 PDU 是什么？
 
 **PDU (PostgreSQL Data Unloader)** 是一款专业级、开源的 PostgreSQL 数据库灾难恢复和数据提取工具，支持 PostgreSQL 14-18 版本。它可以**直接读取** PostgreSQL 数据文件，无需运行中的数据库实例——是灾难恢复、取证分析和紧急数据提取的终极解决方案。
+
+[DUL 官网的 PostgreSQL 数据恢复指南](https://dul.net.cn/recovery/pgdul/) 说明故障后需要保留哪些文件，以及 PostgreSQL DUL（PDU）使用数据文件、预写日志（WAL）或磁盘镜像的条件。
 
 ### 💔 问题场景
 
