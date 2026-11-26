@@ -29,6 +29,8 @@
 
 The [PostgreSQL data recovery guide on the DUL website](https://dul.net.cn/recovery/pgdul/) explains what to preserve after an incident and when PostgreSQL DUL (PDU) can use the remaining database files, write-ahead logs (WAL), or a disk image.
 
+If PostgreSQL will not start and your backups are incomplete, use the [recovery handoff checklist on the DUL website (Chinese)](https://dul.net.cn/postgresql-recovery-service-handoff/) to record what to preserve and agree on how to validate a sample export.
+
 ### 💔 The Problem
 
 PostgreSQL DBAs face critical scenarios like these:
@@ -449,7 +451,6 @@ Copyright © 2024-2025
 - [PostgreSQL recovery tool comparison (Chinese)](https://dul.net.cn/postgresql-data-recovery-tools/)
 - [PostgreSQL backup and WAL coverage checks (Chinese)](https://dul.net.cn/postgresql-backup-wal-gap/)
 - [PostgreSQL recovery service quotes and delivery checks (Chinese)](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
-- [PostgreSQL recovery handoff when backups are incomplete (Chinese)](https://dul.net.cn/postgresql-recovery-service-handoff/)
 - **📚 Full Documentation**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
 - **⚡ Features Overview**: [dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 Quick Start Guide**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
@@ -512,6 +513,8 @@ Visit [dul.net.cn](https://dul.net.cn/postgresql/) for comprehensive guides, or 
 **PDU (PostgreSQL Data Unloader)** 是一款专业级、开源的 PostgreSQL 数据库灾难恢复和数据提取工具，支持 PostgreSQL 14-18 版本。它可以**直接读取** PostgreSQL 数据文件，无需运行中的数据库实例——是灾难恢复、取证分析和紧急数据提取的终极解决方案。
 
 [DUL 官网的 PostgreSQL 数据恢复指南](https://dul.net.cn/recovery/pgdul/) 说明故障后需要保留哪些文件，以及 PostgreSQL DUL（PDU）使用数据文件、预写日志（WAL）或磁盘镜像的条件。
+
+当 PostgreSQL 无法启动而备份又不完整时，可参照 [DUL 官网的恢复委托清单](https://dul.net.cn/postgresql-recovery-service-handoff/)保存数据目录、WAL 和表空间，并与服务方约定导出样本的验收范围。
 
 ### 💔 问题场景
 
@@ -932,7 +935,6 @@ sudo yum install gcc lz4-devel zlib-devel
 - [PostgreSQL 数据恢复工具比较](https://dul.net.cn/postgresql-data-recovery-tools/)
 - [PostgreSQL 备份和 WAL 缺口检查](https://dul.net.cn/postgresql-backup-wal-gap/)
 - [PostgreSQL 数据恢复服务的报价与交付验收](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
-- [PostgreSQL 启动失败且备份不全时的恢复委托清单](https://dul.net.cn/postgresql-recovery-service-handoff/)
 - **📚 完整文档**：[dul.net.cn/docs/](https://dul.net.cn/docs/)
 - **⚡ 功能概览**：[dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 快速开始指南**：[dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
