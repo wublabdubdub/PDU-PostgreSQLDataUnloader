@@ -14,6 +14,8 @@
 
 如果是在 Docker 重建之后发现旧库不见了，请先确认旧容器的数据目录和挂载是否仍在。[Docker 重建后怎样确认 PostgreSQL 旧数据卷](./POSTGRESQL_DOCKER_DATA_LOSS_ZH.md)
 
+如果没有可用备份，手头仅有目标表的数据文件，请先保存文件副本和事故前的表结构，再判断能否导出数据。[DUL 官网上的 PostgreSQL 单表文件恢复指南](https://dul.net.cn/postgresql-single-table-file-recovery/)
+
 ## 三类事故怎么选择恢复路径
 
 | 事故 | 首选路径 | 没有备份时可评估的路径 | 主要边界 |
