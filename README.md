@@ -78,7 +78,7 @@ PDU handles **three critical disaster scenarios** with **two recovery methods**:
 
 | Scenario | What Happened | PDU Solution | Guide |
 |----------|---------------|--------------|-------|
-| ▸ **Database Corruption** | PostgreSQL won't start due to catalog/file corruption | Extract data directly from damaged files | [Read →](https://dul.net.cn/postgresql-offline-export/) |
+| ▸ **Database Corruption** | PostgreSQL won't start due to catalog/file corruption | Extract data directly from damaged files | [Read →](https://dul.net.cn/postgresql-offline-export/) · [1.5 TB case (Chinese)](https://dul.net.cn/postgresql-postgis-offline-export-case/) |
 | ▸ **Accidental DELETE/UPDATE** | Wrong `DELETE`/`UPDATE` executed in production | Replay WAL archives to recover original data | [Read →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
 | ▸ **Data File Loss** | Specific data files deleted or corrupted | Rebuild data from remaining files | [Read →](https://dul.net.cn/postgresql-data-file-deleted/) |
 
@@ -561,7 +561,7 @@ PDU 使用**两种恢复方法**处理**三种关键灾难场景**：
 
 | 场景 | 发生了什么 | PDU 解决方案 | 指南 |
 |------|-----------|--------------|------|
-| ▸ **数据库损坏** | PostgreSQL 因目录/文件损坏无法启动 | 直接从损坏文件中提取数据 | [查看 →](https://dul.net.cn/postgresql-offline-export/) |
+| ▸ **数据库损坏** | PostgreSQL 因目录/文件损坏无法启动 | 直接从损坏文件中提取数据 | [查看 →](https://dul.net.cn/postgresql-offline-export/) · [1.5 TB 离线恢复案例](https://dul.net.cn/postgresql-postgis-offline-export-case/) |
 | ▸ **误执行 DELETE/UPDATE** | 在生产环境执行了错误的 `DELETE`/`UPDATE` | 重放 WAL 归档以恢复原始数据 | [查看 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
 | ▸ **数据文件丢失** | 特定数据文件被删除或损坏 | 从剩余文件重建数据 | [查看 →](https://dul.net.cn/postgresql-data-file-deleted/) |
 
