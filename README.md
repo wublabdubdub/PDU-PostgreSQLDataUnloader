@@ -81,7 +81,7 @@ PDU handles **three critical disaster scenarios** with **two recovery methods**:
 | Scenario | What Happened | PDU Solution | Guide |
 |----------|---------------|--------------|-------|
 | ▸ **Database Corruption** | PostgreSQL won't start due to catalog/file corruption | Extract data directly from damaged files | [Read →](https://dul.net.cn/postgresql-offline-export/) · [1.5 TB case (Chinese)](https://dul.net.cn/postgresql-postgis-offline-export-case/) |
-| ▸ **Accidental DELETE/UPDATE** | Wrong `DELETE`/`UPDATE` executed in production | Replay WAL archives to recover original data | [Read →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| ▸ **Accidental DELETE/UPDATE** | Wrong `DELETE`/`UPDATE` executed in production | Scan available WAL files for deleted rows or earlier field values | [Read →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
 | ▸ **Data File Loss** | Specific data files deleted or corrupted | Rebuild data from remaining files | [Read →](https://dul.net.cn/postgresql-data-file-deleted/) |
 
 ### 🛠️ Two Recovery Methods
@@ -91,7 +91,7 @@ PDU handles **three critical disaster scenarios** with **two recovery methods**:
 - Bypass database engine entirely
 - fast parsing of TOAST data
 
-**2. WAL Archive Scanning**
+**2. WAL Scanning**
 - Analyze Write-Ahead Logs (WAL) for transaction history
 - Extract deleted rows or pre-update values
 - Time-based and transaction-based filtering
@@ -219,7 +219,7 @@ PDU> restore upd <TxID>;         -- Restore pre-UPDATE values
 | `u sch <schema>;` / `unload sch <schema>;` | Export all tables in a schema |
 | `u ddl;` / `unload ddl;` | Generate DDL for the current schema |
 | `u copy;` / `unload copy;` | Generate COPY statements for exported CSVs |
-| `scan <table>;` | Scan WAL archives for DELETE/UPDATE records of one table |
+| `scan <table>;` | Scan WAL files for DELETE/UPDATE records of one table |
 | `scan manual;` | Initialize metadata from files under the manual directory |
 | `scan drop;` | Scan WAL for dropped/truncated table metadata |
 | `meta tab <table>;` | Write one table's metadata to `tab.config` |
@@ -260,7 +260,7 @@ All interactive commands must end with `;`.
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `PGDATA` | PostgreSQL data directory path | `/var/lib/postgresql/15/main` |
-| `ARCHIVE_DEST` | WAL archive directory (for DELETE/UPDATE recovery) | `/var/lib/postgresql/wal_archive` |
+| `ARCHIVE_DEST` | Directory of WAL files to scan for DELETE/UPDATE recovery | `/var/lib/postgresql/wal_archive` |
 
 ---
 
@@ -294,8 +294,8 @@ All interactive commands must end with `;`.
 | **Corrupted Instance** | PostgreSQL won't start—extract data straight from disk | [Open Guide →](https://dul.net.cn/postgresql-offline-export/) |
 | **Corrupted Datafile** | Specific datafile damaged—salvage reachable data | [Open Guide →](https://dul.net.cn/postgresql-offline-export/#inspect) · [Recovering when only one table file remains (Chinese)](https://dul.net.cn/postgresql-single-table-file-recovery/) |
 | **Corrupted Database** | Entire database broken—reconstruct catalog and data | [Open Guide →](https://dul.net.cn/postgresql-offline-export/) |
-| **Deleted Records** | Rows accidentally deleted—replay WAL to recover | [Open Guide →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
-| **Updated Records** | Wrong UPDATE executed—rollback with WAL analysis | [Open Guide →](https://dul.net.cn/recovery/pgdul/#section-2) |
+| **Deleted Records** | Check available WAL files for deleted rows | [Open Guide →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| **Updated Records** | Check available WAL files for values before the update | [Open Guide →](https://dul.net.cn/recovery/pgdul/#section-2) |
 | **No Backup: DELETE / DROP TABLE / DROP DATABASE** | Compare PITR, pg_dirtyread, pg_filedump, PDU, and professional recovery | [Decision Guide →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
@@ -336,10 +336,7 @@ ls -la /var/lib/postgresql/15/main
 
 **Q: WAL scanning (`scan <table>`) returns no results**
 
-A: Ensure:
-- `ARCHIVE_DEST` in `pdu.ini` points to the correct WAL archive directory
-- WAL archiving was enabled when the DELETE/UPDATE occurred
-- Make sure WAL files scanned includes the DELETE/UPDATE operations
+A: Set `ARCHIVE_DEST` in `pdu.ini` to the directory containing the WAL files you want PDU to scan. If PostgreSQL WAL archiving was disabled, use a preserved copy of `pg_wal` if the relevant files are still readable. Check that the files selected for scanning cover the DELETE or UPDATE. PDU can then look for deleted rows or earlier field values.
 
 [Case study: recovering about 350,000 PostgreSQL rows without WAL archiving (Chinese)](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
 
@@ -567,7 +564,7 @@ PDU 使用**两种恢复方法**处理**三种关键灾难场景**：
 | 场景 | 发生了什么 | PDU 解决方案 | 指南 |
 |------|-----------|--------------|------|
 | ▸ **数据库损坏** | PostgreSQL 因目录/文件损坏无法启动 | 直接从损坏文件中提取数据 | [查看 →](https://dul.net.cn/postgresql-offline-export/) · [1.5 TB 离线恢复案例](https://dul.net.cn/postgresql-postgis-offline-export-case/) |
-| ▸ **误执行 DELETE/UPDATE** | 在生产环境执行了错误的 `DELETE`/`UPDATE` | 重放 WAL 归档以恢复原始数据 | [查看 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| ▸ **误执行 DELETE/UPDATE** | 在生产环境执行了错误的 `DELETE`/`UPDATE` | 检查现存 WAL 文件中的误删记录或更新前的字段值 | [查看 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
 | ▸ **数据文件丢失** | 特定数据文件被删除或损坏 | 从剩余文件重建数据 | [查看 →](https://dul.net.cn/postgresql-data-file-deleted/) |
 
 ### 🛠️ 两种恢复方法
@@ -577,7 +574,7 @@ PDU 使用**两种恢复方法**处理**三种关键灾难场景**：
 - 完全绕过数据库引擎
 - 快速解析 TOAST 数据
 
-**2. WAL 归档扫描**
+**2. WAL 扫描**
 - 分析预写日志 (WAL) 的事务历史
 - 提取已删除的行或更新前的值
 - 基于时间和事务的过滤
@@ -746,7 +743,7 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 | 参数 | 说明 | 示例 |
 |------|------|------|
 | `PGDATA` | PostgreSQL 数据目录路径 | `/var/lib/postgresql/15/main` |
-| `ARCHIVE_DEST` | WAL 归档目录（用于 DELETE/UPDATE 恢复） | `/var/lib/postgresql/wal_archive` |
+| `ARCHIVE_DEST` | 供 PDU 扫描的 WAL 文件目录（用于恢复误删或误更新的记录） | `/var/lib/postgresql/wal_archive` |
 
 ---
 
@@ -779,8 +776,8 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 | **实例损坏** | PostgreSQL 无法启动——直接从磁盘提取数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
 | **数据文件损坏** | 特定数据文件损坏——抢救可访问的数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/#inspect) · [只剩一个表文件时的离线恢复](https://dul.net.cn/postgresql-single-table-file-recovery/) |
 | **数据库损坏** | 整个数据库损坏——重建目录和数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
-| **记录被删除** | 行被误删——重放 WAL 以恢复 | [打开指南 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
-| **记录被更新** | 执行了错误的 UPDATE——用 WAL 分析回滚 | [打开指南 →](https://dul.net.cn/recovery/pgdul/#section-2) |
+| **记录被删除** | 检查现存 WAL 文件中能否读到误删的记录 | [打开指南 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| **记录被更新** | 检查现存 WAL 文件中能否读到更新前的字段值 | [打开指南 →](https://dul.net.cn/recovery/pgdul/#section-2) |
 | **无备份：DELETE / DROP TABLE / DROP DATABASE** | 对比 PITR、pg_dirtyread、pg_filedump、PDU 与专业恢复服务 | [查看决策指南 →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
@@ -821,10 +818,7 @@ ls -la /var/lib/postgresql/15/main
 
 **问：WAL 扫描（`scan <表>`）返回无结果**
 
-答：确保：
-- `pdu.ini` 中的 `ARCHIVE_DEST` 指向正确的 WAL 归档目录
-- DELETE/UPDATE 发生时启用了 WAL 归档
-- 扫描的WAL日志包含误操作期间的日志
+答：将 `pdu.ini` 中的 `ARCHIVE_DEST` 指向要扫描的 WAL 文件目录。如果 PostgreSQL 没有启用 WAL 归档，只要相关文件仍可读取，就可以使用事先保留的 `pg_wal` 副本。请确认选择扫描的文件覆盖误执行 DELETE 或 UPDATE 的时间范围，再用 PDU 查找误删的记录或更新前的字段值。
 
 [PostgreSQL 未开 WAL 归档，找回约 35 万条记录](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
 
