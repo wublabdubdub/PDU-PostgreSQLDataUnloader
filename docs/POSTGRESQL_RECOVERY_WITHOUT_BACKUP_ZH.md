@@ -64,6 +64,8 @@ PDU> restore del <TxID>;
 
 需要查找仍可读取的误删记录时，请查看 [PostgreSQL 误删记录恢复指南](https://dul.net.cn/postgresql-deleted-rows-field-notes/)。
 
+在一起未开启 WAL 归档的事故中，DUL 使用 PostgreSQL DUL（PDU）从保留下来的日志中恢复了约 35 万条记录，客户在导入后确认数据可用。 [误删记录恢复案例](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
+
 ### PostgreSQL DROP TABLE 已提交且无备份
 
 `DROP TABLE` 后关系文件通常已经从文件系统移除，`pg_dirtyread` 不能直接扫描未分配磁盘空间。应立即停止原盘写入并制作镜像；如果数据页仍未被覆盖，可结合 DDL、版本、编码和业务约束，在镜像副本上评估 PDU DropScan。
@@ -96,6 +98,8 @@ PDU> dropscan copy;   -- 为恢复结果生成 COPY 命令
 - 恢复结果需要证据链、样本验收和业务完整性清单。
 
 选择服务时，应要求对方说明只读方案、原始介质保护方式、样本验证、输出格式、未恢复对象清单和最终验收标准。不要接受“100% 恢复”承诺。
+
+如果您要比较不同服务方的报价，请先让他们就同一批目标数据说明评估、样本和交付范围。 [PostgreSQL 数据恢复服务报价与交付验收](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
 
 ## 可核查来源
 
