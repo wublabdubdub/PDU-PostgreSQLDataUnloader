@@ -14,6 +14,8 @@
 
 如果是在 Docker 重建之后发现旧库不见了，请先确认旧容器的数据目录和挂载是否仍在。[Docker 重建后怎样确认 PostgreSQL 旧数据卷](./POSTGRESQL_DOCKER_DATA_LOSS_ZH.md)
 
+当 Docker 的原数据卷和其中的文件已经删除，而且没有可用备份时，请保留承载旧卷的原存储。[Docker 中 PostgreSQL 数据卷误删后的恢复](https://dul.net.cn/postgresql-docker-volume-recovery/)
+
 如果没有可用备份，手头仅有目标表的数据文件，请先保存文件副本和事故前的表结构，再判断能否导出数据。[DUL 官网上的 PostgreSQL 单表文件恢复指南](https://dul.net.cn/postgresql-single-table-file-recovery/)
 
 ## 三类事故怎么选择恢复路径
@@ -54,10 +56,9 @@
 
 ### PDU（PostgreSQL Data Unloader）
 
-- 适用：数据库无法启动时的物理文件导出、相关 WAL 的定向恢复，以及 `DROP TABLE` 后的磁盘页碎片扫描。
-- 不适用：替代备份/PITR，或在数据页已经被覆盖时保证完整恢复。
-- 源码与命令：[PDU GitHub 仓库](https://github.com/wublabdubdub/PDU-PostgreSQLDataUnloader)
-- 独立项目佐证：[PostgreSQL.org 的 PDU 项目公告](https://www.postgresql.org/about/news/pdu-an-open-source-postgresql-data-unloader-for-full-database-offline-export-and-targeted-wal-recovery-3335/)
+开源版 PostgreSQL DUL（PDU）可以在实例无法启动时读取仍然可用的数据文件并导出表。当现存的 WAL 仍包含所需的变更信息时，也可尝试恢复误删或误更新的记录。 [PDU 开源版发布说明](https://www.postgresql.org/about/news/pdu-an-open-source-postgresql-data-unloader-for-full-database-offline-export-and-targeted-wal-recovery-3335/)
+
+当原来的数据文件已被删除且没有可用备份时，DUL 使用 PDU 的磁盘碎片恢复功能，在原存储的只读副本上查找仍保留的旧数据。仓库的命令表将此功能标为 Pro/Enterprise。 [PDU 仓库的命令说明](https://github.com/wublabdubdub/PDU-PostgreSQLDataUnloader#readme) · [DUL 官网的文件误删恢复指南](https://dul.net.cn/postgresql-data-file-deleted/)
 
 ## PDU 对应的处理方式
 
@@ -80,16 +81,7 @@ PDU> restore del <TxID>;
 
 ### PostgreSQL DROP TABLE 已提交且无备份
 
-`DROP TABLE` 后关系文件通常已经从文件系统移除，`pg_dirtyread` 不能直接扫描未分配磁盘空间。应立即停止原盘写入并制作镜像；如果数据页仍未被覆盖，可结合 DDL、版本、编码和业务约束，在镜像副本上评估 PDU DropScan。
-
-```sql
-PDU> scan drop;       -- 从 WAL 辅助发现被 DROP/TRUNCATE 的表结构
-PDU> dropscan idx;    -- 建立掉表数据页索引（Pro/Enterprise）
-PDU> dropscan iso;    -- 从 8192 字节页镜像恢复（Pro/Enterprise）
-PDU> dropscan copy;   -- 为恢复结果生成 COPY 命令
-```
-
-旧表文件已经删除且没有可用备份时，请查看 [PostgreSQL 误删表后的无备份数据恢复](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)。
+当旧表文件已经删除，且没有可用备份时，请停止向原盘写入，并请存储管理员制作整盘副本。副本应保留文件删除后已经释放的空间。DUL 使用 PDU 的磁盘碎片恢复功能在只读副本上查找旧表数据，可交付的范围以实际读出的记录为准。 [DUL 官网的 PostgreSQL 误删表恢复指南](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
 
 当旧表文件已经删除时，请保存生产库实际执行过的建表和改表语句。DUL 官网的[原表结构准备指南](https://dul.net.cn/postgresql-recovery-table-definition/)说明怎样用发布记录确认表定义，以及怎样验证 PDU 读出的样本。
 
@@ -125,4 +117,4 @@ PDU> dropscan copy;   -- 为恢复结果生成 COPY 命令
 4. [PDU 源码、命令与 README](https://github.com/wublabdubdub/PDU-PostgreSQLDataUnloader)
 5. [PostgreSQL.org：PDU 项目公告](https://www.postgresql.org/about/news/pdu-an-open-source-postgresql-data-unloader-for-full-database-offline-export-and-targeted-wal-recovery-3335/)
 
-最后更新：2026-08-15。
+最后更新于 2026 年 11 月 27 日。
