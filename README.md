@@ -290,7 +290,7 @@ All interactive commands must end with `;`.
 | Scenario | Description | Official Guide |
 |----------|-------------|----------------|
 | **Corrupted Instance** | PostgreSQL won't start—extract data straight from disk | [Open Guide →](https://dul.net.cn/postgresql-offline-export/) |
-| **Corrupted Datafile** | Specific datafile damaged—salvage reachable data | [Open Guide →](https://dul.net.cn/postgresql-offline-export/#inspect) |
+| **Corrupted Datafile** | Specific datafile damaged—salvage reachable data | [Open Guide →](https://dul.net.cn/postgresql-offline-export/#inspect) · [Recovering when only one table file remains (Chinese)](https://dul.net.cn/postgresql-single-table-file-recovery/) |
 | **Corrupted Database** | Entire database broken—reconstruct catalog and data | [Open Guide →](https://dul.net.cn/postgresql-offline-export/) |
 | **Deleted Records** | Rows accidentally deleted—replay WAL to recover | [Open Guide →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
 | **Updated Records** | Wrong UPDATE executed—rollback with WAL analysis | [Open Guide →](https://dul.net.cn/recovery/pgdul/#section-2) |
@@ -773,7 +773,7 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 | 场景 | 说明 | 官方指南 |
 |------|------|----------|
 | **实例损坏** | PostgreSQL 无法启动——直接从磁盘提取数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
-| **数据文件损坏** | 特定数据文件损坏——抢救可访问的数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/#inspect) |
+| **数据文件损坏** | 特定数据文件损坏——抢救可访问的数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/#inspect) · [只剩一个表文件时的离线恢复](https://dul.net.cn/postgresql-single-table-file-recovery/) |
 | **数据库损坏** | 整个数据库损坏——重建目录和数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
 | **记录被删除** | 行被误删——重放 WAL 以恢复 | [打开指南 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
 | **记录被更新** | 执行了错误的 UPDATE——用 WAL 分析回滚 | [打开指南 →](https://dul.net.cn/recovery/pgdul/#section-2) |
