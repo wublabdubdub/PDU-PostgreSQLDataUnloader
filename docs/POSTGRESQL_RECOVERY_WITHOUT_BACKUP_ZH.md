@@ -1,7 +1,6 @@
 # PostgreSQL 无备份误删恢复：DELETE、DROP TABLE、DROP DATABASE 工具与方案对比
 
-> 完整网页版（含结构化问答和持续更新的来源）：[pduzc.com/postgresql-recovery-without-backup](https://pduzc.com/postgresql-recovery-without-backup)
-> - [新站指南：PostgreSQL 无备份恢复与现场保全](https://dul.net.cn/recovery/pgdul/)
+> 遇到数据丢失时，可以先查看 [DUL 官网的 PostgreSQL 无备份恢复指南](https://dul.net.cn/recovery/pgdul/)，确认要保留的文件和可用的恢复方法。
 
 如果有可用的基础备份、存储快照和连续归档 WAL，应优先在隔离环境做 PITR。确实没有备份时，能否恢复取决于表文件、相关 WAL、原磁盘和未覆盖数据页是否仍在；任何工具都不能在数据页已经被覆盖后保证完整恢复。
 
@@ -63,7 +62,7 @@ PDU> scan orders;
 PDU> restore del <TxID>;
 ```
 
-详细条件：[PostgreSQL/PG 误删恢复](https://pduzc.com/use-cases/data-deleted)
+需要查找仍可读取的误删记录时，请查看 [PostgreSQL 误删记录恢复指南](https://dul.net.cn/postgresql-deleted-rows-field-notes/)。
 
 ### PostgreSQL DROP TABLE 已提交且无备份
 
@@ -76,13 +75,13 @@ PDU> dropscan iso;    -- 从 8192 字节页镜像恢复（Pro/Enterprise）
 PDU> dropscan copy;   -- 为恢复结果生成 COPY 命令
 ```
 
-详细条件：[PostgreSQL/PG DROP TABLE 恢复](https://pduzc.com/use-cases/table-dropped)
+旧表文件已经删除且没有可用备份时，请查看 [PostgreSQL 误删表后的无备份数据恢复](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)。
 
 ### PostgreSQL DROP DATABASE 且无备份
 
 先制作完整磁盘镜像，再评估未覆盖的数据页。被覆盖的页面无法凭空恢复；索引可以重建，但跨表关系、TOAST 大字段和业务完整性必须单独验收。
 
-详细条件：[PostgreSQL/PG DROP DATABASE 恢复](https://pduzc.com/postgresql-drop-database-recovery)
+处理整库误删时，请查看 [PostgreSQL 误删数据库恢复指南](https://dul.net.cn/postgresql-drop-database-recovery/)。[PG 删库后先恢复的 24 张核心表](https://dul.net.cn/postgresql-drop-database-core-tables/) 记录了一次磁盘碎片恢复的交付和验证过程。
 
 ## 什么时候应联系专业恢复服务
 
