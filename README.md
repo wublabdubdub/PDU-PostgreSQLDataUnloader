@@ -25,7 +25,7 @@
 
 ## 🎯 What is PDU?
 
-**PostgreSQL DUL (PDU)** is a PostgreSQL data recovery tool. The open-source edition in this repository supports PostgreSQL 14–18. It can export table data from preserved files without a running instance and scan available write-ahead logs (WAL) for deleted rows or earlier field values.
+[**PostgreSQL DUL (PDU)**](https://dul.net.cn/postgresql/) is a PostgreSQL data recovery tool. The open-source edition in this repository supports PostgreSQL 14–18. It can export table data from preserved files without a running instance and scan available write-ahead logs (WAL) for deleted rows or earlier field values.
 
 The [PostgreSQL data recovery guide on the DUL website](https://dul.net.cn/en/postgresql-data-recovery/) explains what to preserve and how to choose a recovery path. When the original table files are gone and no usable backup is available, DUL uses disk image scanning with PDU Pro or Enterprise to look for surviving table data.
 
@@ -510,7 +510,7 @@ Visit [dul.net.cn](https://dul.net.cn/postgresql/) for comprehensive guides, or 
 
 ## 🎯 PDU 是什么？
 
-**PostgreSQL DUL（PDU）** 是 PostgreSQL 数据恢复工具。本仓库发布的开源版支持 PostgreSQL 14 至 18，可在实例无法启动时读取保留下来的数据文件并导出表。它也可扫描现存的预写日志（WAL），查找误删的记录或更新前的字段值。
+[**PostgreSQL DUL（PDU）**](https://dul.net.cn/postgresql/) 是 PostgreSQL 数据恢复工具。本仓库发布的开源版支持 PostgreSQL 14 至 18，可在实例无法启动时读取保留下来的数据文件并导出表。它也可扫描现存的预写日志（WAL），查找误删的记录或更新前的字段值。
 
 [DUL 官网的 PostgreSQL 数据恢复指南](https://dul.net.cn/recovery/pgdul/)说明事故后要保留的文件和各条恢复路径的适用条件。当原表文件已删除且没有可用备份时，DUL 使用 PDU 专业版或企业版扫描磁盘镜像，查找仍可读取的旧表数据。
 
