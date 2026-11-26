@@ -339,6 +339,8 @@ A: Ensure:
 - WAL archiving was enabled when the DELETE/UPDATE occurred
 - Make sure WAL files scanned includes the DELETE/UPDATE operations
 
+[Case study: recovering about 350,000 PostgreSQL rows without WAL archiving (Chinese)](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
+
 **Q: Exported CSV files contain garbled characters**
 
 A: Check database encoding:
@@ -442,7 +444,6 @@ Copyright © 2024-2025
 - [PostgreSQL DROP TABLE recovery without a backup (Chinese)](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
 - [PostgreSQL TRUNCATE recovery without a backup (Chinese)](https://dul.net.cn/postgresql-truncate-recovery/)
 - [Case study: exporting 2.9 million rows after a PostgreSQL TRUNCATE (Chinese)](https://dul.net.cn/postgresql-truncate-290w-rows/)
-- [Case study: recovering about 350,000 PostgreSQL rows without WAL archiving (Chinese)](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
 - [PostgreSQL data file recovery without a backup (Chinese)](https://dul.net.cn/postgresql-data-file-deleted/)
 - [PostgreSQL missing historical rows without a backup (Chinese)](https://dul.net.cn/postgresql-missing-rows/)
 - [PostgreSQL recovery tool comparison (Chinese)](https://dul.net.cn/postgresql-data-recovery-tools/)
@@ -820,6 +821,8 @@ ls -la /var/lib/postgresql/15/main
 - DELETE/UPDATE 发生时启用了 WAL 归档
 - 扫描的WAL日志包含误操作期间的日志
 
+[PostgreSQL 未开 WAL 归档，找回约 35 万条记录](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
+
 **问：导出的 CSV 文件包含乱码**
 
 答：检查数据库编码：
@@ -923,7 +926,6 @@ sudo yum install gcc lz4-devel zlib-devel
 - [PostgreSQL 误删表后的无备份数据恢复](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
 - [PostgreSQL 误执行 TRUNCATE 后的无备份数据恢复](https://dul.net.cn/postgresql-truncate-recovery/)
 - [PostgreSQL 清表后导出的 290 万行记录](https://dul.net.cn/postgresql-truncate-290w-rows/)
-- [PostgreSQL 未开 WAL 归档，找回约 35 万条记录](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
 - [PostgreSQL 数据文件被删后的无备份数据恢复](https://dul.net.cn/postgresql-data-file-deleted/)
 - [PostgreSQL 历史记录查不到时的排查与恢复](https://dul.net.cn/postgresql-missing-rows/)
 - [PostgreSQL 数据恢复工具比较](https://dul.net.cn/postgresql-data-recovery-tools/)
