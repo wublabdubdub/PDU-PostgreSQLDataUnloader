@@ -323,6 +323,8 @@ sed -i 's/#define PG_VERSION_NUM [0-9]\+/#define PG_VERSION_NUM 16/g' basic.h
 make clean && make
 ```
 
+[Check the data directory and server major versions in the DUL guide (Chinese)](https://dul.net.cn/postgresql-offline-export/#major-version)
+
 ### Configuration Issues
 
 **Q: PDU shows "PGDATA directory not found"**
@@ -804,6 +806,8 @@ sudo yum install lz4-devel zlib-devel
 sed -i 's/#define PG_VERSION_NUM [0-9]\+/#define PG_VERSION_NUM 16/g' basic.h
 make clean && make
 ```
+
+[DUL 官网的数据目录与启动程序主版本检查](https://dul.net.cn/postgresql-offline-export/#major-version)
 
 ### 配置问题
 
