@@ -77,6 +77,8 @@ PDU> dropscan copy;   -- 为恢复结果生成 COPY 命令
 
 旧表文件已经删除且没有可用备份时，请查看 [PostgreSQL 误删表后的无备份数据恢复](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)。
 
+当 `TRUNCATE` 已清空表中的记录且现场没有可用备份时，请查看 [PostgreSQL 误执行 TRUNCATE 后的无备份数据恢复](https://dul.net.cn/postgresql-truncate-recovery/)。[PostgreSQL 清表后导出的 290 万行记录](https://dul.net.cn/postgresql-truncate-290w-rows/) 记录了使用 PDU 保存磁盘上仍可读取的数据并交付导入验证的过程。
+
 ### PostgreSQL DROP DATABASE 且无备份
 
 先制作完整磁盘镜像，再评估未覆盖的数据页。被覆盖的页面无法凭空恢复；索引可以重建，但跨表关系、TOAST 大字段和业务完整性必须单独验收。
