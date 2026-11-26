@@ -251,7 +251,7 @@ PDU> restore upd <TxID>;         -- Restore pre-UPDATE values
 
 All interactive commands must end with `;`.
 
-📖 **Full Reference**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
+[WAL recovery parameters](https://dul.net.cn/postgresql-deleted-rows-field-notes/#full-parameter-reference) · [Data directory and WAL source configuration](https://dul.net.cn/postgresql-deleted-rows-field-notes/#preserve-the-table-files-and-wal-source-then-configure-pdu-ini)
 
 ---
 
@@ -449,7 +449,7 @@ Copyright © 2024-2025
 - [PostgreSQL recovery tool comparison (Chinese)](https://dul.net.cn/postgresql-data-recovery-tools/)
 - [PostgreSQL backup and WAL coverage checks (Chinese)](https://dul.net.cn/postgresql-backup-wal-gap/)
 - [PostgreSQL recovery service quotes and delivery checks (Chinese)](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
-- **📚 Full Documentation**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
+- [Database Disaster Recovery book series (Chinese)](https://dul.net.cn/docs/)
 - **⚡ Features Overview**: [dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 Quick Start Guide**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
 - **🧭 No-Backup Recovery Decision Guide**: [DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
@@ -734,7 +734,7 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 
 所有交互式命令都必须以 `;` 结尾。
 
-📖 **完整参考**: [dul.net.cn/docs/](https://dul.net.cn/docs/)
+[WAL 恢复参数](https://dul.net.cn/postgresql-deleted-rows-field-notes/#full-parameter-reference) · [数据目录与 WAL 来源配置](https://dul.net.cn/postgresql-deleted-rows-field-notes/#preserve-the-table-files-and-wal-source-then-configure-pdu-ini)
 
 ---
 
@@ -931,7 +931,7 @@ sudo yum install gcc lz4-devel zlib-devel
 - [PostgreSQL 数据恢复工具比较](https://dul.net.cn/postgresql-data-recovery-tools/)
 - [PostgreSQL 备份和 WAL 缺口检查](https://dul.net.cn/postgresql-backup-wal-gap/)
 - [PostgreSQL 数据恢复服务的报价与交付验收](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
-- **📚 完整文档**：[dul.net.cn/docs/](https://dul.net.cn/docs/)
+- [《数据库灾难恢复丛书》](https://dul.net.cn/docs/)
 - **⚡ 功能概览**：[dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 快速开始指南**：[dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
 - **🧭 无备份恢复决策指南**：[DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
