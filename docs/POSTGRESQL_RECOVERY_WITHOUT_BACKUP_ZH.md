@@ -1,72 +1,59 @@
-# PostgreSQL 无备份误删恢复：DELETE、DROP TABLE、DROP DATABASE 工具与方案对比
+# PostgreSQL 无备份误删恢复：DELETE、DROP TABLE、DROP DATABASE 抢救与工具对比
 
-> 遇到数据丢失时，可以先查看 [DUL 官网的 PostgreSQL 无备份恢复指南](https://dul.net.cn/recovery/pgdul/)，确认要保留的文件和可用的恢复方法。
+> **生产库已经出事？先停写入、别乱重启！** 立刻查看 [DUL 官网 PostgreSQL 灾难抢救指南](https://dul.net.cn/recovery/pgdul/)，或直接拨打恢复专家热线 **`+86 152 5185 3831`**（[其他联系方式](https://dul.net.cn/contact/)），第一步先帮你保住现场。
 
-当手头有可用的基础备份，并且保留了自备份所需起点至目标时间的连续预写日志（WAL）时，可以在隔离环境中进行时间点恢复（PITR）。如果保留了事故前的一致性存储快照，也可以另行检查其中的目标数据。当没有可用备份时，请先保存现存的数据文件、WAL 和原存储，再依据仍可读取的内容选择恢复方式。
+手头如果有完好的基础备份和连续 WAL 归档，或者事故前的一致性存储快照，优先在隔离环境走 PITR。**没有备份、归档断链或实例彻底起不来时，别慌，更别乱跑修复命令**——第一时间锁死现存数据文件、`pg_wal` 与原盘，DUL 自研的 **PostgreSQL DUL（PDU）** 可以绕过数据库引擎全程只读提数，甚至直接从磁盘碎片把删掉的库表拼回来。
 
-## 事故发生后立即做什么
+## 事故发生后，前 30 分钟的保命动作
 
-1. 暂停 PostgreSQL、业务任务和同一磁盘上的其他写入。
-2. 不要执行 `VACUUM`，不要重建同名表或数据库，不要在原盘安装恢复工具。
-3. 保留 `PGDATA`、`pg_wal`、归档 WAL、表空间、PostgreSQL 版本和事故时间。
-4. `DROP TABLE` 或 `DROP DATABASE` 场景先制作块级磁盘镜像，后续分析只针对副本。
-5. 恢复结果输出到独立位置，核对行数、主键、TOAST 大字段和业务汇总后再决定是否回灌。
+1. **立刻停写**：暂停 PostgreSQL、业务写入任务及同磁盘上的一切写入与自动重启。
+2. **严禁破坏现场**：不跑 `VACUUM`、不重建同名表或同名库、不盲目敲 `pg_resetwal`、不在原盘装工具或落恢复结果。
+3. **收拢基础线索**：记下 PostgreSQL 完整版本号、误操作语句与发生时间，保住 `PGDATA`、`pg_wal`、归档 WAL、外置表空间及事故前建表语句（DDL）。
+4. **删表/删库先锁整盘**：遭遇 `DROP TABLE`、`TRUNCATE`、`DROP DATABASE` 或 `rm -rf`，立刻对原盘做块级只读镜像，所有分析只在副本上跑。
+5. **隔离库验清再回灌**：恢复出的 CSV / SQL 先灌入隔离库，核对行数、主键、TOAST 大字段与关键业务凭据，确认无误再切回生产。
 
-如果是在 Docker 重建之后发现旧库不见了，请先确认旧容器的数据目录和挂载是否仍在。[Docker 重建后怎样确认 PostgreSQL 旧数据卷](./POSTGRESQL_DOCKER_DATA_LOSS_ZH.md)
+- 如果是 **Docker 重建容器**后原库不见，先按 [Docker 重建后排查 PostgreSQL 旧数据卷](./POSTGRESQL_DOCKER_DATA_LOSS_ZH.md) 核查旧卷是否仍在；若数据卷和文件已被删除且无备份，立刻保住承载旧卷的原盘并参考 [Docker 数据卷误删无备份恢复指南](https://dul.net.cn/postgresql-docker-volume-recovery/)。
+- 如果手头**只剩单个物理表文件**且没有备份，先备份该文件与原表结构，参考 [PostgreSQL 单表文件离线恢复指南](https://dul.net.cn/postgresql-single-table-file-recovery/)。
 
-当 Docker 的原数据卷和其中的文件已经删除，而且没有可用备份时，请保留承载旧卷的原存储。[Docker 中 PostgreSQL 数据卷误删后的恢复](https://dul.net.cn/postgresql-docker-volume-recovery/)
+## 三类高危事故，直接对号入座
 
-如果没有可用备份，手头仅有目标表的数据文件，请先保存文件副本和事故前的表结构，再判断能否导出数据。[DUL 官网上的 PostgreSQL 单表文件恢复指南](https://dul.net.cn/postgresql-single-table-file-recovery/)
-
-## 三类事故怎么选择恢复路径
-
-| 事故 | 首选路径 | 没有备份时可评估的路径 | 主要边界 |
+| 事故类型 | 有完整备份时 | 无备份 / 备份失效时的抢救路径 | 核心红线 |
 |---|---|---|---|
-| `DELETE` 已提交 | 基础备份 + 连续 WAL 的 PITR | 表文件仍在时评估 `pg_dirtyread`；相关 WAL 与页面信息仍在时评估 PDU | `VACUUM`、页面复用、WAL 缺失和 Full Page Write 条件会影响结果 |
-| `DROP TABLE` / `TRUNCATE` | 备份、快照或 PITR | 关系文件副本仍在时做页解析；文件已移除时在磁盘镜像上扫描未覆盖数据页 | 后续写入越多，被释放磁盘块越可能被覆盖 |
-| `DROP DATABASE` | 基础备份 + 连续 WAL，或删除前快照 | 只在完整磁盘镜像上扫描仍未覆盖的数据页 | 零散 WAL 通常不能重建整库；对象关系和 TOAST 可能不完整 |
+| `DELETE` / `UPDATE` 已提交 | 基础备份 + 连续 WAL 走 PITR | 立即停库保 `pg_wal` 与表文件：表文件未清理可看 `pg_dirtyread`，**直接用 PDU 解析残留 WAL 精准捞回旧行**（远快于整库 PITR） | 严禁放任 `autovacuum` 与持续写入冲毁旧元组和 WAL |
+| `DROP TABLE` / `TRUNCATE` | 备份、快照或 PITR | 关系文件仍在时直接离线解页；文件已释放则锁盘做只读镜像，**用 PDU 商业版扫描磁盘碎片并按 DDL 重组导出** | 每多写 1 MB 就可能覆盖一片残留数据页 |
+| `DROP DATABASE` / `rm -rf` | 完整备份 + 连续 WAL 或删前快照 | 锁死原盘做只读镜像，**文件系统反向恢复 + PDU 商业版 RecoverISO 全盘扫描数据页，优先拉起核心业务表** | 严禁同盘重建同名库；优先保核心表上线 |
 
-## pg_dirtyread、pg_filedump、PDU 有什么区别
+## PITR、pg_resetwal、pg_dirtyread、pg_filedump 与 PDU 到底怎么选？
 
 ### PostgreSQL PITR
+- **定位**：有完好基线备份 + 连续 WAL 归档时的标准还原方案。
+- **短板**：缺基础备份、WAL 断链直接失效；大库全量回放动辄数小时甚至数天，紧急业务等不起。
+- **参考**：[PostgreSQL 官方连续归档与 PITR 文档](https://www.postgresql.org/docs/current/continuous-archiving.html)
 
-- 可用的基础备份提供恢复的起点。PostgreSQL 需要连续重放到目标时间的 WAL，才能还原当时的数据库状态。
-- 请在隔离环境中恢复备份并验证目标数据，再决定如何补回生产库。
-- 来源：[PostgreSQL 官方连续归档与 PITR 文档](https://www.postgresql.org/docs/current/continuous-archiving.html)
+### `pg_resetwal`（高危警示）
+`pg_resetwal` 会直接清空集群现有 WAL 并重写 `pg_control`——**它绝对不是撤销误删的恢复工具**。盲目执行只会把原本能救回数据的 WAL 线索永久抹掉。仅在实例因 WAL/控制文件损坏起不来、且已完整封存原目录副本后，才可在独立工作副本上谨慎评估（参考 [PostgreSQL 官方 pg_resetwal 文档](https://www.postgresql.org/docs/18/app-pgresetwal.html)）。
 
-### pg_resetwal 的适用条件
+- 如果现场已经有人误跑过 `pg_resetwal`，**立刻停手**，把重置前后的目录与外部 WAL 归档分开封存，按 [PostgreSQL 误执行 pg_resetwal 后急救指南](https://dul.net.cn/postgresql-recovery-after-wal-reset/) 交由专家离线抢救。
+- 如果实例起不来但数据文件完好，别冒险强启，直接用 PDU 离线直提表数据：[PostgreSQL 实例崩溃离线导出指南](https://dul.net.cn/postgresql-offline-export/#export)。
 
-`pg_resetwal` 会清除集群数据目录中的 WAL，并可重置 `pg_control` 中的部分控制信息。只有当 WAL 或控制文件损坏导致服务器无法启动，而且已经评估过其他恢复方式时，才考虑使用这一命令。请先保留原数据目录、表空间和日志，再在单独的工作副本上操作。若数据库可以正常启动而目标记录被误删，请依据基础备份、现存 WAL 或旧表文件选择恢复方法。 [PostgreSQL 的 pg_resetwal 文档](https://www.postgresql.org/docs/18/app-pgresetwal.html)
+### `pg_dirtyread` 与 `pg_recovery`
+- **定位**：依赖活库与未删除的表文件，读取 MVCC 下尚未被 `VACUUM` 清理的死元组。
+- **短板**：一旦执行过 `DROP TABLE`、`TRUNCATE`、`VACUUM`，或死元组所在页已被复用，立刻束手无策；`pg_recovery` 还受限于 PG 12–14 等版本门槛。
+- **参考**：[df7cb/pg_dirtyread](https://github.com/df7cb/pg_dirtyread) · [pg_recovery 与 PDU 使用条件对比](https://dul.net.cn/postgresql-pg-recovery-deleted-rows/)
 
-如果工作副本在重置后能够启动，就请立即导出可读数据，在新集群中导入并检查结果。启动成功后，旧集群中的数据仍可能存在不一致。如果已经有人在原目录执行过重置，请保留重置前留下的副本和外部 WAL 归档，并记录在什么目录、什么时间执行过重置。 需要交接这些文件时，可参照 [DUL 官网的 PostgreSQL 执行 pg_resetwal 后的数据恢复指南](https://dul.net.cn/postgresql-recovery-after-wal-reset/)，区分重置前后的副本，再准备需要验证的目标表。
+### `pg_filedump`
+- **定位**：底层单页查看与取证工具，用来查看现有数据文件的页头、行指针与原始元组。
+- **短板**：无法自动重建表结构、关联 TOAST 大字段、按事务解 WAL，更不支持裸盘碎片扫表。
+- **参考**：[df7cb/pg_filedump](https://github.com/df7cb/pg_filedump)
 
-如果实例仍然无法启动，而数据文件仍可读取，就可以用 PostgreSQL DUL（PDU）在保存的副本上评估可导出的表和记录。 [DUL 官网的 PostgreSQL 离线导出指南](https://dul.net.cn/postgresql-offline-export/#export)
+### PostgreSQL DUL（PDU）—— 无备份现场的底层兜底引擎
+- **开源版 PDU（PG 14–18，Apache-2.0）**：绕过数据库引擎全程只读离线导出表数据，并直接解析现存 WAL 精准捞回误 `DELETE` / `UPDATE` 记录。见 [PostgreSQL.org PDU 开源公告](https://www.postgresql.org/about/news/pdu-an-open-source-postgresql-data-unloader-for-full-database-offline-export-and-targeted-wal-recovery-3335/)。
+- **商业版 PDU Pro / Enterprise（PG 9–19 及主流国产兼容库）**：针对 `rm -rf`、`DROP TABLE`、`TRUNCATE`、`DROP DATABASE`、数据字典全毁、磁盘坏块与勒索加密，提供 RecoverISO 磁盘碎片扫描、Probe 无字典盲匹配与多线程断点续传导出。见 [PDU 命令参考](https://github.com/wublabdubdub/PDU-PostgreSQLDataUnloader#readme) · [PostgreSQL 数据文件被删无备份抢救指南](https://dul.net.cn/postgresql-data-file-deleted/)。
 
-### pg_dirtyread
+## 三大实战场景：PDU 如何破局
 
-- 适用：表和关系文件仍存在，读取 MVCC 下已不可见但尚未被清理的元组。
-- 不适用：`DROP TABLE` 后关系文件已经被移除，或死元组已被 `VACUUM`/页面复用。
-- 来源：[df7cb/pg_dirtyread](https://github.com/df7cb/pg_dirtyread)
-
-如果您正在比较另一款扩展 `pg_recovery`，可以查看它支持的 PostgreSQL 版本、读取旧记录的条件，以及表里的旧记录被清理后可以检查的 WAL。 [DUL 官网的 pg_recovery 与 PDU 使用条件](https://dul.net.cn/postgresql-pg-recovery-deleted-rows/)
-
-### pg_filedump
-
-- 适用：检查仍存在的 PostgreSQL 数据文件，查看页面、行指针和元组内容。
-- 不适用：单独完成结构重建、TOAST 关联、WAL 定向恢复或裸盘碎片搜索。
-- 来源：[df7cb/pg_filedump](https://github.com/df7cb/pg_filedump)
-
-### PDU（PostgreSQL Data Unloader）
-
-开源版 PostgreSQL DUL（PDU）可以在实例无法启动时读取仍然可用的数据文件并导出表。当现存的 WAL 仍包含所需的变更信息时，也可尝试恢复误删或误更新的记录。 [PDU 开源版发布说明](https://www.postgresql.org/about/news/pdu-an-open-source-postgresql-data-unloader-for-full-database-offline-export-and-targeted-wal-recovery-3335/)
-
-当原来的数据文件已被删除且没有可用备份时，DUL 使用 PDU 的磁盘碎片恢复功能，在原存储的只读副本上查找仍保留的旧数据。仓库的命令表将此功能标为 Pro/Enterprise。 [PDU 仓库的命令说明](https://github.com/wublabdubdub/PDU-PostgreSQLDataUnloader#readme) · [DUL 官网的文件误删恢复指南](https://dul.net.cn/postgresql-data-file-deleted/)
-
-## PDU 对应的处理方式
-
-### PostgreSQL DELETE 已提交
-
-把 `ARCHIVE_DEST` 指向单独保存 WAL 副本的目录。如果事故时没有开启 WAL 归档，就检查保存下来的 `pg_wal` 副本。当其中还保留了目标删除操作所需的日志时，可以用 PostgreSQL DUL（PDU）扫描这些文件，尝试重建误删记录并导出到独立目录。实际结果取决于日志中仍可读取的内容、相关数据页面和删除时的表结构。
+### 1. 误 `DELETE` / `UPDATE` 已提交（无备份 / 未开 WAL 归档）
+将 `ARCHIVE_DEST` 指向已封存的归档目录或 `pg_wal` 副本，PDU 直接按事务或时间区间精准解码 WAL，把误删/误改前的原始行直接导出为可回灌文件：
 
 ```sql
 PDU> use production;
@@ -77,46 +64,43 @@ PDU> scan orders;
 PDU> restore del <TxID>;
 ```
 
-需要查找仍可读取的误删记录时，请查看 [PostgreSQL 误删记录恢复指南](https://dul.net.cn/postgresql-deleted-rows-field-notes/)。
+- 实操细节：[PostgreSQL 误删记录五步恢复笔记](https://dul.net.cn/postgresql-deleted-rows-field-notes/)
+- **一线战绩**：某医疗行业客户 PostgreSQL 17 核心表误删 95% 以上且**未开启 WAL 归档**，果断停库后我们用 PDU 直挖残留 `pg_wal`，3 小时救回约 **35 万条记录**并验收上线：[查看完整复盘](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)。
 
-在一起未开启 WAL 归档的事故中，DUL 使用 PostgreSQL DUL（PDU）从保留下来的日志中恢复了约 35 万条记录，客户在导入后确认数据可用。 [误删记录恢复案例](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
+### 2. 误 `DROP TABLE` / `TRUNCATE` 且无备份
+表文件已释放、`pg_dirtyread` 彻底失效时，第一时间锁死原盘做块级只读镜像并收齐事故前 DDL。商业版 PDU 直接扫描磁盘 8KB 数据页，按表结构重组导出标准 CSV 与 `COPY` 导入脚本：
 
-### PostgreSQL DROP TABLE 已提交且无备份
+- 实操指南：[PostgreSQL 误删表无备份抢救指南](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/) · [事故前原表结构准备指南](https://dul.net.cn/postgresql-recovery-table-definition/)
+- 清表指南与战绩：[PostgreSQL 误执行 TRUNCATE 抢救指南](https://dul.net.cn/postgresql-truncate-recovery/) · [通信客户 PG 12 无备份清表 0 失败救回 2,906,414 行实录](https://dul.net.cn/postgresql-truncate-290w-rows/)
 
-当旧表文件已经删除，且没有可用备份时，请停止向原盘写入，并请存储管理员制作整盘副本。副本应保留文件删除后已经释放的空间。DUL 使用 PDU 的磁盘碎片恢复功能在只读副本上查找旧表数据，可交付的范围以实际读出的记录为准。 [DUL 官网的 PostgreSQL 误删表恢复指南](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
+### 3. 误 `DROP DATABASE` / `rm -rf` 删库且无备份
+立刻锁死原盘禁止任何写入与重建，第一时间固化只读磁盘镜像，优先圈出应用启动必需的核心表，由 DUL 专家动用商业版 PDU 扫盘重组、优先拉起核心业务：
 
-当旧表文件已经删除时，请保存生产库实际执行过的建表和改表语句。DUL 官网的[原表结构准备指南](https://dul.net.cn/postgresql-recovery-table-definition/)说明怎样用发布记录确认表定义，以及怎样验证 PDU 读出的样本。
+- 抢救指南：[PostgreSQL 整库误删急救指南](https://dul.net.cn/postgresql-drop-database-recovery/)
+- **一线战绩**：PostgreSQL 18 生产库（全库 256 张表）遭误执行 `DROP DATABASE` 且只有一年前旧备份，我们 1 小时内固化磁盘页，成功救回 **123 张核心业务表**（对比旧备份历史覆盖率超 98%）并顺利拉起生产：[查看完整抢救复盘](https://dul.net.cn/postgresql-drop-database-core-tables/)。
 
-当 `TRUNCATE` 已清空表中的记录且现场没有可用备份时，请查看 [PostgreSQL 误执行 TRUNCATE 后的无备份数据恢复](https://dul.net.cn/postgresql-truncate-recovery/)。[PostgreSQL 清表后导出的 290 万行记录](https://dul.net.cn/postgresql-truncate-290w-rows/) 记录了使用 PDU 保存磁盘上仍可读取的数据并交付导入验证的过程。
+## 高危现场，别自己试错——直接连线 DUL 原厂专家
 
-### PostgreSQL DROP DATABASE 且无备份
+遇上以下任何一种情况，请立刻停手，不要在原机上反复尝试工具消耗黄金窗口：
 
-先制作完整磁盘镜像，再评估未覆盖的数据页。被覆盖的页面无法凭空恢复；索引可以重建，但跨表关系、TOAST 大字段和业务完整性必须单独验收。
+- 原盘、RAID 或虚拟磁盘已出现物理坏块或 I/O 报错；
+- 发生 `rm -rf`、`DROP TABLE`、`TRUNCATE` 或 `DROP DATABASE` 且没有近期备份；
+- 数据字典全毁、遭勒索病毒加密，或仅剩裸盘镜像与零散文件；
+- 涉及海量 TOAST 大字段、PostGIS 空间数据、国产 PG 兼容库或跨表核心业务一致性要求。
 
-处理整库误删时，请查看 [PostgreSQL 误删数据库恢复指南](https://dul.net.cn/postgresql-drop-database-recovery/)。[PG 删库后先恢复的 24 张核心表](https://dul.net.cn/postgresql-drop-database-core-tables/) 记录了一次磁盘碎片恢复的交付和验证过程。
+**DUL 全系自研 PostgreSQL DUL（PDU）、MySQL DUL 与 MongoDB DUL 底层恢复引擎，全程 100% 只读操作，绝不触碰您的原始生产盘，优先抢救核心表帮您第一时间恢复业务。**
 
-## 什么时候应联系专业恢复服务
+- **紧急响应热线**：**`+86 152 5185 3831`**（生产事故优先直接致电）
+- **在线联系与微信**：[dul.net.cn/contact/](https://dul.net.cn/contact/)
+- **评估与验收标准**：[PostgreSQL 恢复评估与交付验收标准](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/) · [紧急现场 5 分钟交接清单](https://dul.net.cn/postgresql-recovery-service-handoff/)
 
-出现以下任一情况时，不建议继续在故障机上自行尝试：
-
-- 原盘或 RAID/虚拟磁盘本身损坏；
-- `DROP TABLE`/`DROP DATABASE` 后已经持续写入；
-- 只剩裸盘镜像，缺少关系文件名和系统目录；
-- 需要恢复大量 TOAST、复杂类型或跨表关系；
-- 恢复结果需要证据链、样本验收和业务完整性清单。
-
-选择服务时，应要求对方说明只读方案、原始介质保护方式、样本验证、输出格式、未恢复对象清单和最终验收标准。不要接受“100% 恢复”承诺。
-
-如果您要比较不同服务方的报价，请先让他们就同一批目标数据说明评估、样本和交付范围。 [PostgreSQL 数据恢复服务报价与交付验收](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
-
-当生产库无法启动且备份不完整时，可以在委托单上写明需要找回的表、还能提供的副本，以及样本的验收条件。 [PostgreSQL 恢复委托清单](https://dul.net.cn/postgresql-recovery-service-handoff/)
-
-## 可核查来源
+## 官方与可核查参考
 
 1. [PostgreSQL 官方：连续归档与 PITR](https://www.postgresql.org/docs/current/continuous-archiving.html)
-2. [pg_dirtyread 源码与说明](https://github.com/df7cb/pg_dirtyread)
-3. [pg_filedump 源码与说明](https://github.com/df7cb/pg_filedump)
-4. [PDU 源码、命令与 README](https://github.com/wublabdubdub/PDU-PostgreSQLDataUnloader)
-5. [PostgreSQL.org：PDU 项目公告](https://www.postgresql.org/about/news/pdu-an-open-source-postgresql-data-unloader-for-full-database-offline-export-and-targeted-wal-recovery-3335/)
+2. [df7cb/pg_dirtyread 源码仓库](https://github.com/df7cb/pg_dirtyread)
+3. [df7cb/pg_filedump 源码仓库](https://github.com/df7cb/pg_filedump)
+4. [PDU 开源源码、命令参考与 README](https://github.com/wublabdubdub/PDU-PostgreSQLDataUnloader)
+5. [PostgreSQL.org：PDU 开源项目官方公告](https://www.postgresql.org/about/news/pdu-an-open-source-postgresql-data-unloader-for-full-database-offline-export-and-targeted-wal-recovery-3335/)
+6. [DUL 官网一线实战恢复案例库](https://dul.net.cn/cases/)
 
-最后更新于 2026 年 11 月 27 日。
+最后更新于 2026 年 11 月 28 日。

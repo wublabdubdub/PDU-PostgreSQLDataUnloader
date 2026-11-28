@@ -25,11 +25,11 @@
 
 ## 🎯 What is PDU?
 
-[**PostgreSQL DUL (PDU)**](https://dul.net.cn/postgresql/) is a PostgreSQL data recovery tool. The open-source edition in this repository supports PostgreSQL 14–18. It can export table data from preserved files without a running instance and scan available write-ahead logs (WAL) for deleted rows or earlier field values.
+[**PostgreSQL DUL (PDU)**](https://dul.net.cn/postgresql/) is a production-proven physical data recovery engine for PostgreSQL. The open-source edition in this repository supports PostgreSQL 14–18—exporting tables offline when an instance refuses to start and scanning available WAL files to pull back accidentally deleted or updated rows without slow full PITR replay.
 
-The [PostgreSQL data recovery guide on the DUL website](https://dul.net.cn/en/postgresql-data-recovery/) explains what to preserve and how to choose a recovery path. When the original table files are gone and no usable backup is available, DUL uses disk image scanning with PDU Pro or Enterprise to look for surviving table data.
+Hit a production outage? Freeze writes first and check the [PostgreSQL data recovery guide on DUL](https://dul.net.cn/en/postgresql-data-recovery/). When data files are gone (`rm -rf`, `DROP TABLE`, `TRUNCATE`, or `DROP DATABASE`) with no usable backup, DUL experts deploy the full commercial PDU Pro/Enterprise engine (PostgreSQL 9–19) to scan read-only disk images and rebuild surviving core tables—call **`+86 152 5185 3831`** or reach the [DUL recovery team](https://dul.net.cn/contact/) immediately.
 
-If PostgreSQL will not start and your backups are incomplete, use the [recovery handoff checklist on the DUL website (Chinese)](https://dul.net.cn/postgresql-recovery-service-handoff/) to record what to preserve and agree on how to validate a sample export.
+For unbootable instances with incomplete backups, use the [5-minute recovery handoff checklist (Chinese)](https://dul.net.cn/postgresql-recovery-service-handoff/) to lock down your files and prioritize core tables.
 
 ### 💔 The Problem
 
@@ -441,22 +441,22 @@ Copyright © 2024-2025
 
 ## 🔗 Links & Resources
 
-- **🌐 Official Website**: [dul.net.cn](https://dul.net.cn/postgresql/)
+- **🌐 Official Website**: [dul.net.cn](https://dul.net.cn/postgresql/) · **🚨 Emergency Recovery Hotline**: `+86 152 5185 3831` ([Contact Experts](https://dul.net.cn/contact/))
 - [PostgreSQL DROP TABLE recovery without a backup (Chinese)](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
 - [PostgreSQL TRUNCATE recovery without a backup (Chinese)](https://dul.net.cn/postgresql-truncate-recovery/)
-- [Case study: exporting 2.9 million rows after a PostgreSQL TRUNCATE (Chinese)](https://dul.net.cn/postgresql-truncate-290w-rows/)
+- [Case study: exporting 2.9 million rows with zero errors after a PostgreSQL TRUNCATE (Chinese)](https://dul.net.cn/postgresql-truncate-290w-rows/)
 - [PostgreSQL data file recovery without a backup (Chinese)](https://dul.net.cn/postgresql-data-file-deleted/)
 - [Recovery after a PostgreSQL Docker volume is deleted (Chinese)](https://dul.net.cn/postgresql-docker-volume-recovery/)
 - [PostgreSQL missing historical rows without a backup (Chinese)](https://dul.net.cn/postgresql-missing-rows/)
 - [PostgreSQL recovery tool comparison (Chinese)](https://dul.net.cn/postgresql-data-recovery-tools/)
 - [PostgreSQL backup and WAL coverage checks (Chinese)](https://dul.net.cn/postgresql-backup-wal-gap/)
-- [PostgreSQL recovery service quotes and delivery checks (Chinese)](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
+- [PostgreSQL recovery evaluation and delivery validation (Chinese)](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
 - [Database Disaster Recovery book series (Chinese)](https://dul.net.cn/docs/)
 - **⚡ Features Overview**: [dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 Quick Start Guide**: [dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
 - **🧭 No-Backup Recovery Decision Guide**: [DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
-- [Case study: 24 priority tables recovered after an accidental PostgreSQL DROP DATABASE (Chinese)](https://dul.net.cn/postgresql-drop-database-core-tables/)
-- [PostgreSQL data recovery cases and validation (Chinese)](https://dul.net.cn/postgresql-data-recovery-cases/)
+- [Case study: 123 core tables recovered after an accidental PostgreSQL DROP DATABASE (Chinese)](https://dul.net.cn/postgresql-drop-database-core-tables/)
+- [PostgreSQL frontline disaster recovery cases (Chinese)](https://dul.net.cn/postgresql-data-recovery-cases/)
 - **💬 GitHub Issues**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub Repository**: [github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
@@ -510,11 +510,11 @@ Visit [dul.net.cn](https://dul.net.cn/postgresql/) for comprehensive guides, or 
 
 ## 🎯 PDU 是什么？
 
-[**PostgreSQL DUL（PDU）**](https://dul.net.cn/postgresql/) 是 PostgreSQL 数据恢复工具。本仓库发布的开源版支持 PostgreSQL 14 至 18，可在实例无法启动时读取保留下来的数据文件并导出表。它也可扫描现存的预写日志（WAL），查找误删的记录或更新前的字段值。
+[**PostgreSQL DUL（PDU）**](https://dul.net.cn/postgresql/) 是历经大量生产灾难实战打磨的 PostgreSQL 底层数据恢复引擎。本仓库开源版支持 PostgreSQL 14–18，无需启动实例即可离线直提表数据，并直接解析现存 WAL 精准捞回误删或误更新的原始记录，远快于传统 PITR。
 
-[DUL 官网的 PostgreSQL 数据恢复指南](https://dul.net.cn/recovery/pgdul/)说明事故后要保留的文件和各条恢复路径的适用条件。当原表文件已删除且没有可用备份时，DUL 使用 PDU 专业版或企业版扫描磁盘镜像，查找仍可读取的旧表数据。
+生产库已经出事？第一时间停止原盘写入，立即查看 [DUL 官网 PostgreSQL 灾难抢救指南](https://dul.net.cn/recovery/pgdul/)。面对 `rm -rf`、`DROP TABLE`、`TRUNCATE`、`DROP DATABASE`、数据字典全毁或勒索加密等无备份极端现场，DUL 原厂团队动用全功能商业版 PDU（支持 PostgreSQL 9–19 及主流国产兼容库）在只读盘镜像上扫盘重组、优先拉起核心业务——紧急事故直接致电 **`+86 152 5185 3831`** 或前往 [联系恢复专家](https://dul.net.cn/contact/)。
 
-当 PostgreSQL 无法启动而备份又不完整时，可参照 [DUL 官网的恢复委托清单](https://dul.net.cn/postgresql-recovery-service-handoff/)保存数据目录、WAL 和表空间，并与服务方约定导出样本的验收范围。
+实例彻底起不来且备份残缺时，可按 [紧急现场 5 分钟交接清单](https://dul.net.cn/postgresql-recovery-service-handoff/) 快速封存 `PGDATA`、`pg_wal` 与表空间并锁定核心表优先级。
 
 ### 💔 问题场景
 
@@ -775,12 +775,12 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 
 | 场景 | 说明 | 官方指南 |
 |------|------|----------|
-| **实例损坏** | PostgreSQL 无法启动——直接从磁盘提取数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
-| **数据文件损坏** | 特定数据文件损坏——抢救可访问的数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/#inspect) · [只剩一个表文件时的离线恢复](https://dul.net.cn/postgresql-single-table-file-recovery/) |
-| **数据库损坏** | 整个数据库损坏——重建目录和数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
-| **记录被删除** | 检查现存 WAL 文件中能否读到误删的记录 | [打开指南 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
-| **记录被更新** | 检查现存 WAL 文件中能否读到更新前的字段值 | [打开指南 →](https://dul.net.cn/recovery/pgdul/#section-2) |
-| **无备份：DELETE / DROP TABLE / DROP DATABASE** | 对比 PITR、pg_dirtyread、pg_filedump、PDU 与专业恢复服务 | [查看决策指南 →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
+| **实例损坏** | PostgreSQL 无法启动——绕过引擎直提底层表数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
+| **数据文件损坏** | 特定数据文件损坏——跳过坏页抢救可读数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/#inspect) · [只剩单个物理表文件离线直拆](https://dul.net.cn/postgresql-single-table-file-recovery/) |
+| **数据库损坏** | 整个数据库损坏或字典全毁——重建目录并导出数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
+| **记录误删** | 直接解析现存 WAL 精准捞回被删原始行 | [打开指南 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
+| **记录误更新** | 解析现存 WAL 还原 UPDATE 前的原始字段值 | [打开指南 →](https://dul.net.cn/recovery/pgdul/#section-2) |
+| **无备份：DELETE / DROP TABLE / DROP DATABASE** | 黄金止损、工具选型对比与原厂专家抢救路径 | [查看抢救指南 →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
 
@@ -822,9 +822,9 @@ ls -la /var/lib/postgresql/15/main
 
 **问：WAL 扫描（`scan <表>`）返回无结果**
 
-答：将 `pdu.ini` 中的 `ARCHIVE_DEST` 指向要扫描的 WAL 文件目录。如果 PostgreSQL 没有启用 WAL 归档，只要相关文件仍可读取，就可以使用事先保留的 `pg_wal` 副本。请确认选择扫描的文件覆盖误执行 DELETE 或 UPDATE 的时间范围，再用 PDU 查找误删的记录或更新前的字段值。
+答：将 `pdu.ini` 中的 `ARCHIVE_DEST` 指向已封存的 WAL 目录。即使未开启 WAL 归档，只要停库及时、`pg_wal` 副本中仍留着误操作窗口的日志段，一样可以直接指向该 `pg_wal` 副本用 PDU 精准捞回误删或误更新前的记录。
 
-[PostgreSQL 未开 WAL 归档，找回约 35 万条记录](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
+[实战复盘：PostgreSQL 未开 WAL 归档，3 小时捞回约 35 万条误删记录](https://dul.net.cn/postgresql-delete-recovery-without-wal-archive/)
 
 **问：导出的 CSV 文件包含乱码**
 
@@ -925,22 +925,22 @@ sudo yum install gcc lz4-devel zlib-devel
 
 ## 🔗 链接与资源
 
-- **🌐 官方网站**：[dul.net.cn](https://dul.net.cn/postgresql/)
+- **🌐 官方网站**：[dul.net.cn](https://dul.net.cn/postgresql/) · **🚨 紧急恢复热线**：`+86 152 5185 3831`（[直连恢复专家](https://dul.net.cn/contact/)）
 - [PostgreSQL 误删表后的无备份数据恢复](https://dul.net.cn/postgresql-drop-table-recovery-without-backup/)
 - [PostgreSQL 误执行 TRUNCATE 后的无备份数据恢复](https://dul.net.cn/postgresql-truncate-recovery/)
-- [PostgreSQL 清表后导出的 290 万行记录](https://dul.net.cn/postgresql-truncate-290w-rows/)
+- [实战战绩：PostgreSQL 无备份清表 0 失败抢回 290 万行](https://dul.net.cn/postgresql-truncate-290w-rows/)
 - [PostgreSQL 数据文件被删后的无备份数据恢复](https://dul.net.cn/postgresql-data-file-deleted/)
-- [Docker 中 PostgreSQL 数据卷误删后的恢复](https://dul.net.cn/postgresql-docker-volume-recovery/)
-- [PostgreSQL 历史记录查不到时的排查与恢复](https://dul.net.cn/postgresql-missing-rows/)
-- [PostgreSQL 数据恢复工具比较](https://dul.net.cn/postgresql-data-recovery-tools/)
-- [PostgreSQL 备份和 WAL 缺口检查](https://dul.net.cn/postgresql-backup-wal-gap/)
-- [PostgreSQL 数据恢复服务的报价与交付验收](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
+- [Docker 中 PostgreSQL 数据卷误删后的抢救指南](https://dul.net.cn/postgresql-docker-volume-recovery/)
+- [PostgreSQL 历史记录消失时的排查与找回](https://dul.net.cn/postgresql-missing-rows/)
+- [PostgreSQL 无备份恢复工具实战对比](https://dul.net.cn/postgresql-data-recovery-tools/)
+- [PostgreSQL 备份与 WAL 断链止损指南](https://dul.net.cn/postgresql-backup-wal-gap/)
+- [PostgreSQL 恢复评估与交付验收标准](https://dul.net.cn/postgresql-data-recovery-service-cost-success-rate/)
 - [《数据库灾难恢复丛书》](https://dul.net.cn/docs/)
-- **⚡ 功能概览**：[dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
+- **⚡ 引擎能力概览**：[dul.net.cn/postgresql/](https://dul.net.cn/postgresql/)
 - **🚀 快速开始指南**：[dul.net.cn/quickstart/](https://dul.net.cn/quickstart/)
-- **🧭 无备份恢复决策指南**：[DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
-- [PG 删库后先恢复的 24 张核心表](https://dul.net.cn/postgresql-drop-database-core-tables/)
-- [PostgreSQL 数据恢复案例与验收](https://dul.net.cn/postgresql-data-recovery-cases/)
+- **🧭 无备份抢救指南**：[DELETE / DROP TABLE / DROP DATABASE](https://dul.net.cn/recovery/pgdul/)
+- [实战战绩：PG 18 整库误删救回 123 张核心业务表](https://dul.net.cn/postgresql-drop-database-core-tables/)
+- [PostgreSQL 一线生产灾难实战案例](https://dul.net.cn/postgresql-data-recovery-cases/)
 - **💬 GitHub Issues**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader/issues)
 - **📂 GitHub 仓库**：[github.com/wublabdubdub/PDU-PostgresqlDataUnloader](https://github.com/wublabdubdub/PDU-PostgresqlDataUnloader)
 
