@@ -512,7 +512,7 @@ Visit [dul.net.cn](https://dul.net.cn/postgresql/) for comprehensive guides, or 
 
 [**PostgreSQL DUL（PDU）**](https://dul.net.cn/postgresql/) 是历经大量生产灾难实战打磨的 PostgreSQL 底层数据恢复引擎。本仓库开源版支持 PostgreSQL 14–18，无需启动实例即可离线直提表数据，并直接解析现存 WAL 精准捞回误删或误更新的原始记录，远快于传统 PITR。
 
-生产库已经出事？第一时间停止原盘写入，立即查看 [DUL 官网 PostgreSQL 灾难抢救指南](https://dul.net.cn/recovery/pgdul/)。面对 `rm -rf`、`DROP TABLE`、`TRUNCATE`、`DROP DATABASE`、数据字典全毁或勒索加密等无备份极端现场，DUL 原厂团队动用全功能商业版 PDU（支持 PostgreSQL 9–19 及主流国产兼容库）在只读盘镜像上扫盘重组、优先拉起核心业务——紧急事故直接致电 **`+86 152 5185 3831`** 或前往 [联系恢复专家](https://dul.net.cn/contact/)。
+生产库已经出事？第一时间停止原盘写入，立即查看 [DUL 官网 PostgreSQL 灾难抢救指南](https://dul.net.cn/recovery/pgdul/)。面对 `rm -rf`、`DROP TABLE`、`TRUNCATE`、`DROP DATABASE`、数据字典全毁或勒索加密等无备份极端现场，DUL 团队动用全功能商业版 PDU（支持 PostgreSQL 9–19 及主流国产兼容库）在只读盘镜像上扫盘重组、优先拉起核心业务——紧急事故直接致电 **`+86 152 5185 3831`** 或前往 [联系恢复专家](https://dul.net.cn/contact/)。
 
 实例彻底起不来且备份残缺时，可按 [紧急现场 5 分钟交接清单](https://dul.net.cn/postgresql-recovery-service-handoff/) 快速封存 `PGDATA`、`pg_wal` 与表空间并锁定核心表优先级。
 
@@ -780,7 +780,7 @@ PDU> restore upd <TxID>;         -- 恢复 UPDATE 前的值
 | **数据库损坏** | 整个数据库损坏或字典全毁——重建目录并导出数据 | [打开指南 →](https://dul.net.cn/postgresql-offline-export/) |
 | **记录误删** | 直接解析现存 WAL 精准捞回被删原始行 | [打开指南 →](https://dul.net.cn/postgresql-deleted-rows-field-notes/) |
 | **记录误更新** | 解析现存 WAL 还原 UPDATE 前的原始字段值 | [打开指南 →](https://dul.net.cn/recovery/pgdul/#section-2) |
-| **无备份：DELETE / DROP TABLE / DROP DATABASE** | 黄金止损、工具选型对比与原厂专家抢救路径 | [查看抢救指南 →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
+| **无备份：DELETE / DROP TABLE / DROP DATABASE** | 黄金止损、工具选型对比与专家抢救路径 | [查看抢救指南 →](docs/POSTGRESQL_RECOVERY_WITHOUT_BACKUP_ZH.md) |
 
 ---
 

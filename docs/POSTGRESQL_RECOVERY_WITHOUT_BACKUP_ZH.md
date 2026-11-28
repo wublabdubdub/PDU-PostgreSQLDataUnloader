@@ -79,7 +79,7 @@ PDU> restore del <TxID>;
 - 抢救指南：[PostgreSQL 整库误删急救指南](https://dul.net.cn/postgresql-drop-database-recovery/)
 - **一线战绩**：PostgreSQL 18 生产库（全库 256 张表）遭误执行 `DROP DATABASE` 且只有一年前旧备份，我们 1 小时内固化磁盘页，成功救回 **123 张核心业务表**（对比旧备份历史覆盖率超 98%）并顺利拉起生产：[查看完整抢救复盘](https://dul.net.cn/postgresql-drop-database-core-tables/)。
 
-## 高危现场，别自己试错——直接连线 DUL 原厂专家
+## 高危现场，别自己试错——直接连线 DUL 恢复专家
 
 遇上以下任何一种情况，请立刻停手，不要在原机上反复尝试工具消耗黄金窗口：
 
